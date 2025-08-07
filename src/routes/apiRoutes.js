@@ -4,8 +4,13 @@ const usuarioController = require("../controllers/userController");
 const verifyJWT = require("../middlewares/verifyJWT");
 
 router.post("/register", usuarioController.registerUser);
-router.post("/verify-code", usuarioController.verifyUser);
+router.post("/verify-register", usuarioController.verifyUser);
 router.post("/login",  usuarioController.loginUsuario);
+
+router.put("/user/:idUser",  usuarioController.updateUser);
+router.post("/verify-update", usuarioController.verifyUpdate);
+
+router.delete("/user/:idUser", usuarioController.deleteUser);
 
 router.get("/users", verifyJWT, usuarioController.getAllUsers);
 
