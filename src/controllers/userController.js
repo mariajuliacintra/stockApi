@@ -1,5 +1,10 @@
 const validateUser = require("../services/validateUser");
-const { queryAsync, createToken } = require("../utils/functions");
+const mailSender = require("../services/mail/mailSender");
+const {
+  queryAsync,
+  createToken,
+  generateRandomCode,
+} = require("../utils/functions");
 const bcrypt = require("bcrypt");
 
 const tempUsers = {};
@@ -19,11 +24,16 @@ module.exports = class usuarioController {
         return res.status(400).json(emailValidationError);
       }
 
-      const verificationCode = validateUser.generateRandomCode();
-      const emailSent = await validateUser.sendVerificationEmail(email, verificationCode);
+      const verificationCode = generateRandomCode();
+      const emailSent = await mailSender.sendVerificationEmail(
+        email,
+        verificationCode
+      );
 
       if (!emailSent) {
-        return res.status(500).json({ error: "Erro ao enviar o e-mail de verificação." });
+        return res
+          .status(500)
+          .json({ error: "Erro ao enviar o e-mail de verificação." });
       }
 
       const saltRounds = Number(process.env.SALT_ROUNDS);
@@ -38,7 +48,8 @@ module.exports = class usuarioController {
       };
 
       return res.status(200).json({
-        message: "Usuário temporariamente cadastrado. Verifique seu e-mail para o código de verificação.",
+        message:
+          "Usuário temporariamente cadastrado. Verifique seu e-mail para o código de verificação.",
       });
     } catch (error) {
       console.error(error);
@@ -50,13 +61,21 @@ module.exports = class usuarioController {
     const { email, code } = req.body;
 
     if (!email || !code) {
-      return res.status(400).json({ error: 'E-mail e código são obrigatórios.' });
+      return res
+        .status(400)
+        .json({ error: "E-mail e código são obrigatórios." });
     }
 
     const storedUser = tempUsers[email];
 
-    if (!storedUser || storedUser.verificationCode !== code || Date.now() > storedUser.expiresAt) {
-      return res.status(401).json({ error: 'Código de verificação inválido ou expirado.' });
+    if (
+      !storedUser ||
+      storedUser.verificationCode !== code ||
+      Date.now() > storedUser.expiresAt
+    ) {
+      return res
+        .status(401)
+        .json({ error: "Código de verificação inválido ou expirado." });
     }
 
     try {

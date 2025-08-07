@@ -1,65 +1,8 @@
 const connect = require("../db/connect");
 const { validatePassword } = require("../utils/functions");
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
-
-function generateRandomCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-async function sendVerificationEmail(email, code) {
-  const mailOptions = {
-    from: process.env.GMAIL_USER,
-    to: email,
-    subject: 'Seu Código de Verificação',
-    html: `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-                .email-container { max-width: 600px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-                .code { display: inline-block; padding: 15px 25px; font-size: 24px; font-weight: bold; color: #ffffff; background-color: #007bff; border-radius: 5px; margin-top: 20px; }
-                h1 { color: #333333; }
-                p { color: #666666; line-height: 1.6; }
-            </style>
-        </head>
-        <body>
-            <div class="email-container">
-                <h1>Verificação de Conta</h1>
-                <p>Olá,</p>
-                <p>Para concluir a verificação da sua conta, use o código abaixo:</p>
-                <div class="code">${code}</div>
-                <p style="margin-top: 20px;">Este código é válido por 5 minutos. Se você não solicitou esta verificação, ignore este e-mail.</p>
-                <p>Atenciosamente,<br>Sua Equipe</p>
-            </div>
-        </body>
-        </html>
-    `,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
 
 const validateUser = function ({ name, email, password, confirmPassword }) {
-  const senaiDomains = [
-    "@sp.senai.br",
-    "@gmail.com"
-  ];
+  const senaiDomains = ["@sp.senai.br", "@aluno.senai.br", "@gmail.com"];
 
   if (!name || !email || !password || !confirmPassword) {
     return { error: "Todos os campos devem ser preenchidos" };
@@ -105,9 +48,7 @@ const validateEmail = async function (email) {
 };
 
 const validateLogin = function ({ email, password }) {
-  const senaiDomains = [
-    "@sp.senai.br",
-  ];
+  const senaiDomains = ["@sp.senai.br", "@aluno.senai.br", "@gmail.com"];
   if (!email || !password) {
     return { error: "Todos os campos devem ser preenchidos" };
   }
@@ -127,6 +68,4 @@ module.exports = {
   validateUser,
   validateEmail,
   validateLogin,
-  generateRandomCode,
-  sendVerificationEmail,
 };

@@ -23,4 +23,8 @@ function validatePassword(password) {
   return regex.test(password);
 }
 
-module.exports = { queryAsync, validatePassword, createToken };
+function generateRandomCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+module.exports = { queryAsync, validatePassword, createToken, generateRandomCode };
