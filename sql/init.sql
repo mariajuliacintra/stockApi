@@ -2,11 +2,11 @@ CREATE DATABASE IF NOT EXISTS stock;
 USE stock;
 
 DROP TABLE IF EXISTS transactions;
-DROP TABLE IF EXISTS product;
-DROP TABLE IF EXISTS equipment;
-DROP TABLE IF EXISTS rawMaterial;
-DROP TABLE IF EXISTS material;
 DROP TABLE IF EXISTS tool;
+DROP TABLE IF EXISTS material;
+DROP TABLE IF EXISTS rawMaterial;
+DROP TABLE IF EXISTS equipment;
+DROP TABLE IF EXISTS product;
 DROP TABLE IF EXISTS diverses;
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS location;
@@ -115,7 +115,6 @@ CREATE TABLE transactions (
     FOREIGN KEY (fkIdUser) REFERENCES user(idUser)
 );
 
-
 CREATE INDEX idxToolName ON tool(name);
 CREATE INDEX idxToolFkIdLocation ON tool(fkIdLocation);
 CREATE INDEX idxMaterialName ON material(name);
@@ -147,6 +146,10 @@ INSERT INTO location (place, locationCode) VALUES
 ('Depósito', 'D1'),
 ('Depósito', 'D2'),
 ('Depósito', 'D3');
+
+INSERT INTO user (name, email, hashedPassword, role) VALUES
+('João Silva', 'joao.silva@sp.senai.br', '$2a$12$pUpODOURw.nIEgqGiT4sNuPPoesLu.9rg4dTyikxPGOiyMQUDzVZu', 'manager'), -- Joao.1234
+('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user'); -- Maria.2345
 
 INSERT INTO tool (name, brand, description, technicalSpecs, quantity, lastMaintenance, batchNumber, fkIdLocation) VALUES
 ('Martelo Unha', 'Tramontina', 'Cabo Madeira', '500g', 15, '2025-01-10', 'MRT-202501-001', 1),
@@ -220,22 +223,18 @@ INSERT INTO diverses (name, brand, description, technicalSpecs, quantity, expira
 ('Cartuchos de Tinta', 'HP', 'Preto e Colorido', 'Modelo 664', 3.0, '2027-02-20', 'CT-202702-009', 10),
 ('Esponja de Limpeza', '3M', 'Dupla Face', NULL, 30.0, NULL, 'EL-202507-010', 4);
 
-INSERT INTO user (name, email, hashedPassword, role) VALUES
-('João Silva', 'joao.silva@sp.senai.br', '$2a$12$pUpODOURw.nIEgqGiT4sNuPPoesLu.9rg4dTyikxPGOiyMQUDzVZu', 'manager'), -- Joao.1234
-('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user'); -- Maria.2345
-
 INSERT INTO transactions (fkIdUser, itemType, itemId, actionDescription, quantityChange, oldQuantity, newQuantity, transactionDate) VALUES
 (1, 'tool', 3, 'OUT', -2, 5, 3, '2025-07-13 14:00:00'),
 (2, 'material', 5, 'OUT', -20.0, 100.0, 80.0, '2025-07-13 14:05:00'),
-(3, 'equipment', 1, 'OUT', -1, 8, 7, '2025-07-13 14:10:00'),
-(4, 'product', 2, 'OUT', -5, 15, 10, '2025-07-13 14:15:00'),
-(5, 'tool', 1, 'IN', 5, 15, 20, '2025-07-13 14:20:00'),
-(6, 'material', 7, 'OUT', -10.0, 15.0, 5.0, '2025-07-13 14:25:00'),
-(7, 'rawMaterial', 4, 'OUT', -3.0, 5.0, 2.0, '2025-07-13 14:30:00'),
-(8, 'equipment', 3, 'IN', 10, 50, 60, '2025-07-13 14:35:00'),
-(9, 'product', 1, 'OUT', -3, 20, 17, '2025-07-13 14:40:00'),
-(10, 'tool', 2, 'OUT', -10, 30, 20, '2025-07-13 14:45:00'),
+(1, 'equipment', 1, 'OUT', -1, 8, 7, '2025-07-13 14:10:00'),
+(2, 'product', 2, 'OUT', -5, 15, 10, '2025-07-13 14:15:00'),
+(1, 'tool', 1, 'IN', 5, 15, 20, '2025-07-13 14:20:00'),
+(2, 'material', 7, 'OUT', -10.0, 15.0, 5.0, '2025-07-13 14:25:00'),
+(1, 'rawMaterial', 4, 'OUT', -3.0, 5.0, 2.0, '2025-07-13 14:30:00'),
+(2, 'equipment', 3, 'IN', 10, 50, 60, '2025-07-13 14:35:00'),
+(1, 'product', 1, 'OUT', -3, 20, 17, '2025-07-13 14:40:00'),
+(2, 'tool', 2, 'OUT', -10, 30, 20, '2025-07-13 14:45:00'),
 (1, 'tool', 3, 'AJUST', 0, 3, 3, '2025-07-14 09:00:00'),
 (2, 'material', 4, 'AJUST', -5.0, 25.0, 20.0, '2025-07-14 10:30:00'),
-(3, 'rawMaterial', 1, 'IN', 10.0, 50.0, 60.0, '2025-07-14 11:00:00'),
-(4, 'product', 5, 'IN', 5, 0, 5, '2025-07-14 12:00:00');
+(1, 'rawMaterial', 1, 'IN', 10.0, 50.0, 60.0, '2025-07-14 11:00:00'),
+(2, 'product', 5, 'IN', 5, 0, 5, '2025-07-14 12:00:00');

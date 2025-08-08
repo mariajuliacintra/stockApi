@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .email-container { max-width: 600px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333333; }
+        p { color: #666666; line-height: 1.6; }
+        .user-data { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .user-data p { margin: 5px 0; }
+        .user-data strong { color: #333333; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <h1>Perfil Atualizado</h1>
+        <p>Olá,</p>
+        <p>Confirmamos que as informações do seu perfil foram atualizadas com sucesso. Seus dados atuais são:</p>
+        <div class="user-data">
+            <p><strong>Nome:</strong> {{name}}</p>
+            <p><strong>E-mail:</strong> {{email}}</p>
+        </div>
+        <p style="margin-top: 20px;">Se você não realizou esta alteração, entre em contato imediatamente.</p>
+        <p>Atenciosamente,<br> Estoque SENAI</p>
+    </div>
+</body>
+</html>

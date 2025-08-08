@@ -14,6 +14,21 @@ const queryAsync = (query, values = []) => {
   });
 };
 
+const senaiDomains = ["@sp.senai.br", "@aluno.senai.br", "@gmail.com"];
+
+const validateDomain = function (email) {
+  if (!email.includes("@")) {
+    return { error: "Email inválido. Deve conter @" };
+  }
+  const emailDomain = email.substring(email.lastIndexOf("@"));
+  if (!senaiDomains.includes(emailDomain)) {
+    return {
+      error: "Email inválido. Deve pertencer a um domínio SENAI autorizado",
+    };
+  }
+  return null;
+};
+
 function createToken(payload, expirationTime = "1h") {
   return jwt.sign(payload, tokenSecret, { expiresIn: expirationTime });
 }
@@ -23,4 +38,8 @@ function validatePassword(password) {
   return regex.test(password);
 }
 
-module.exports = { queryAsync, validatePassword, createToken };
+function generateRandomCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+module.exports = { queryAsync, validatePassword, validateDomain, createToken, generateRandomCode };
