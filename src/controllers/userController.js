@@ -168,9 +168,9 @@ module.exports = class usuarioController {
     const { idUser } = req.params;
     const { name, email, password, confirmPassword } = req.body;
 
-    // if (req.userId != idUser) {
-    //   return res.status(403).json({ error: "Não autorizado" });
-    // }
+    if (req.userId != idUser) {
+      return res.status(403).json({ error: "Não autorizado" });
+    }
 
     const updateValidationError = validateUser.validateUpdate(req.body, idUser);
     if (updateValidationError) {
@@ -183,7 +183,7 @@ module.exports = class usuarioController {
       if (userExistsResults.length === 0) {
         return res.status(404).json({ error: "Usuário não encontrado" });
       }
-      
+
       const userToUpdate = userExistsResults[0];
 
       if (email && email !== userToUpdate.email) {
@@ -297,7 +297,7 @@ module.exports = class usuarioController {
 
       fieldsToUpdate.push("hashedPassword = ?");
       values.push(hashedPassword);
-      
+
       const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
       values.push(idUser);
 
@@ -324,11 +324,11 @@ module.exports = class usuarioController {
   static async deleteUser(req, res) {
     const { idUser } = req.params;
 
-    // TODO: Adicionar verificação de autorização aqui, por exemplo,
-    // if (req.userId != idUser) { ... }
+    if (req.userId != idUser) {
+      return res.status(403).json({ error: "Não autorizado" });
+    }
 
     try {
-      // Primeiro, verificar se o usuário existe para obter os dados para o e-mail
       const userExistsQuery = `SELECT idUser, name, email FROM user WHERE idUser = ?`;
       const userExistsResults = await queryAsync(userExistsQuery, [idUser]);
       if (userExistsResults.length === 0) {
@@ -337,11 +337,9 @@ module.exports = class usuarioController {
 
       const userToDelete = userExistsResults[0];
 
-      // Deletar o usuário do banco de dados
       const deleteQuery = `DELETE FROM user WHERE idUser = ?`;
       await queryAsync(deleteQuery, [idUser]);
 
-      // Enviar e-mail de confirmação de deleção para o usuário
       mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
 
       return res.status(200).json({
