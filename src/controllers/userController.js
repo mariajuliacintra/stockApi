@@ -111,7 +111,7 @@ module.exports = class usuarioController {
     }
   }
 
-  static async loginUsuario(req, res) {
+  static async loginUser(req, res) {
     const { email, password } = req.body;
 
     const loginValidationError = validateUser.validateLogin(req.body);
@@ -351,3 +351,53 @@ module.exports = class usuarioController {
     }
   }
 };
+
+/*
+curl --location 'http://localhost:5000/stock/user/login' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "joao.silva@sp.senai.br",
+    "password": "Joao.1234"
+}'
+
+curl --location 'http://localhost:5000/stock/users' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: {userToken}'
+
+curl --location 'http://localhost:5000/stock/user/register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "name": "Vinicius Fogaça",
+    "email": "vinicius.f.cintra@aluno.senai.br",
+    "password": "Vinicius.3456",
+    "confirmPassword": "Vinicius.3456"
+}'
+
+curl --location 'http://localhost:5000/stock/user/verify-register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "vinicius.f.cintra@aluno.senai.br",
+    "code": "{mailCode}"
+}'
+
+curl --location --request PUT 'http://localhost:5000/stock/user/2' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: {userToken}' \
+--data-raw '{
+    "name": "Vinicius Fogaça Cintra",
+    "email": "vinicius.f.cintra@aluno.senai.br",
+    "password": "Vinicius.9871",
+    "confirmPassword": "Vinicius.9871"
+}'
+
+curl --location 'http://localhost:5000/stock/user/verify-update' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "vinicius.f.cintra@aluno.senai.br",
+    "code": "{mailCode}"
+}'
+
+curl --location --request DELETE 'http://localhost:5000/stock/user/2' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: {userToken}'
+*/
