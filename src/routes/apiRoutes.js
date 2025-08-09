@@ -64,10 +64,10 @@ router.delete("/product/:idProduct", verifyJWT, productController.deleteProduct)
 
 // Routes for Diverse Items
 router.post("/diverses", verifyJWT, diversesController.createDiverses);
-router.get("/diverses-items", verifyJWT, diversesController.getAllDiverses);
-router.get("/diverses/:idDiverses", verifyJWT, diversesController.getDiversesById);
-router.put("/diverses/:idDiverses", verifyJWT, diversesController.updateDiverses);
-router.delete("/diverses/:idDiverses", verifyJWT, diversesController.deleteDiverses);
+router.get("/diverses", verifyJWT, diversesController.getAllDiverses);
+router.get("/diverse/:idDiverses", verifyJWT, diversesController.getDiversesById);
+router.put("/diverse/:idDiverses", verifyJWT, diversesController.updateDiverses);
+router.delete("/diverse/:idDiverses", verifyJWT, diversesController.deleteDiverses);
 
 // Routes for Transactions
 router.post("/transaction", verifyJWT, transactionController.createTransactionFromRequest);

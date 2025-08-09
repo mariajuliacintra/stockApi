@@ -47,7 +47,7 @@ curl --location --request PUT 'http://localhost:5000/stock/tool/1' \
     "aliases": "Martelo de Mecânico, Marreta de Bola",
     "brand": "Stanley",
     "description": "Ferramenta Para Moldar Metal e Rebites",
-    "technicalSpecs": "Cabo de fibra de vidro, 900g, 32oz",
+    "technicalSpecs": "Cabo de Fibra de Vidro, 900g, 32oz",
     "quantity": 15,
     "lastMaintenance": "2025-06-05",
     "batchNumber": "MB-202506-003",
