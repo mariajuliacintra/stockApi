@@ -62,38 +62,3 @@ module.exports = class LocationController {
         }
     }
 };
-
-/*
-CURLs para LocationController:
-
-// POST create a new location
-// Os campos 'place' e 'locationCode' são obrigatórios.
-curl --location 'http://localhost:5000/stock/location' \
---header 'Content-Type: application/json' \
---header 'Authorization: {userToken}' \
---data-raw '{
-    "place": "Nova Prateleira",
-    "locationCode": "Z1"
-}'
-
-// GET all locations
-curl --location 'http://localhost:5000/stock/locations' \
---header 'Authorization: {userToken}'
-
-// GET location by ID
-curl --location 'http://localhost:5000/stock/location/1' \
---header 'Authorization: {userToken}'
-
-// PUT update location by ID
-curl --location --request PUT 'http://localhost:5000/stock/location/1' \
---header 'Content-Type: application/json' \
---header 'Authorization: {userToken}' \
---data-raw '{
-    "place": "Prateleira Grande",
-    "locationCode": "A1-1"
-}'
-
-// DELETE location by ID
-curl --location --request DELETE 'http://localhost:5000/stock/location/1' \
---header 'Authorization: {userToken}'
-*/

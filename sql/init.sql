@@ -1,6 +1,8 @@
+-- Cria o banco de dados 'stock' se ele não existir
 CREATE DATABASE IF NOT EXISTS stock;
 USE stock;
 
+-- Exclui tabelas na ordem correta para evitar erros de chaves estrangeiras
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS tool;
 DROP TABLE IF EXISTS material;
@@ -11,6 +13,7 @@ DROP TABLE IF EXISTS diverses;
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS location;
 
+-- Tabela para armazenar informações de localização
 CREATE TABLE location (
     idLocation INT PRIMARY KEY AUTO_INCREMENT,
     place VARCHAR(255) NOT NULL,
@@ -18,14 +21,18 @@ CREATE TABLE location (
     UNIQUE(place, locationCode)
 );
 
+-- Tabela de usuários com as colunas createdAt e updatedAt adicionadas
 CREATE TABLE user (
     idUser INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     hashedPassword VARCHAR(255) NOT NULL,
-    role VARCHAR(255) NOT NULL CHECK (role IN ('user', 'manager'))
+    role VARCHAR(255) NOT NULL CHECK (role IN ('user', 'manager')),
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Tabela para ferramentas
 CREATE TABLE tool (
     idTool INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -40,6 +47,7 @@ CREATE TABLE tool (
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
 
+-- Tabela para materiais
 CREATE TABLE material (
     idMaterial INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -54,6 +62,7 @@ CREATE TABLE material (
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
 
+-- Tabela para matérias-primas
 CREATE TABLE rawMaterial (
     idRawMaterial INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -67,6 +76,7 @@ CREATE TABLE rawMaterial (
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
 
+-- Tabela para equipamentos
 CREATE TABLE equipment (
     idEquipment INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -80,6 +90,7 @@ CREATE TABLE equipment (
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
 
+-- Tabela para produtos
 CREATE TABLE product (
     idProduct INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -94,6 +105,7 @@ CREATE TABLE product (
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
 
+-- Tabela para itens diversos
 CREATE TABLE diverses (
     idDiverses INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -108,6 +120,7 @@ CREATE TABLE diverses (
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
 
+-- Tabela para transações de estoque
 CREATE TABLE transactions (
     idTransaction INT PRIMARY KEY AUTO_INCREMENT,
     fkIdUser INT NOT NULL,
@@ -121,6 +134,7 @@ CREATE TABLE transactions (
     FOREIGN KEY (fkIdUser) REFERENCES user(idUser)
 );
 
+-- Índices para otimizar consultas
 CREATE INDEX idxToolName ON tool(name);
 CREATE INDEX idxToolFkIdLocation ON tool(fkIdLocation);
 CREATE INDEX idxMaterialName ON material(name);
@@ -139,6 +153,7 @@ CREATE INDEX idxTransactionsDate ON transactions(transactionDate);
 CREATE INDEX idxTransactionsAction ON transactions(actionDescription);
 CREATE INDEX idxTransactionsItem ON transactions(itemType, itemId);
 
+-- Inserção de dados nas tabelas
 INSERT INTO location (place, locationCode) VALUES
 ('Prateleira', 'A1'),
 ('Prateleira', 'A2'),
