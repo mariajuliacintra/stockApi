@@ -9,7 +9,7 @@ module.exports = class RawMaterialController {
             return res.status(400).json({ error: validationResult.message });
         }
         const { fkIdUser, name, aliases, brand, description, technicalSpecs, quantity, batchNumber, fkIdLocation } = req.body;
-        const query = 'INSERT INTO rawMaterial (name, aliases, brand, description, technicalSpecs, quantity, batchNumber, fkIdLocation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        const query = 'INSERT INTO rawMaterial (name, aliases, brand, description, technicalSpecs, quantity, batchNumber, fkIdLocation) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
         const values = [name, aliases, brand, description, technicalSpecs, quantity, batchNumber, fkIdLocation];
         try {
             const result = await queryAsync(query, values);
