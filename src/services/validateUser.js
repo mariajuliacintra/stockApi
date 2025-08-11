@@ -1,4 +1,3 @@
-const connect = require("../db/connect");
 const { validatePassword, validateDomain } = require("../utils/functions");
 const { queryAsync } = require("../utils/functions");
 
