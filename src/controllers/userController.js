@@ -350,54 +350,79 @@ module.exports = class usuarioController {
       return res.status(500).json({ error: "Erro Interno do Servidor" });
     }
   }
+
+  static async verifyRecoveryPassword(req, res) {
+    const { email } = req.body;
+
+    try {
+      const query = `SELECT email FROM user WHERE email = ?`;
+      const results = await queryAsync(query, [email]);
+
+      if (results.length === 0) {
+        return res.status(404).json({ error: "E-mail não encontrado." });
+      }
+
+      const verificationCode = generateRandomCode();
+      const emailSent = await mailSender.sendPasswordRecoveryEmail(
+        email,
+        verificationCode
+      );
+
+      if (!emailSent) {
+        return res
+          .status(500)
+          .json({ error: "Erro ao enviar o e-mail de recuperação." });
+      }
+
+      tempUsers[email] = {
+        verificationCode,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      };
+
+      return res.status(200).json({
+        message: "Código de recuperação enviado para o seu e-mail.",
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro Interno do Servidor" });
+    }
+  }
+
+  static async recoveryPassword(req, res) {
+    const { email, code, password, confirmPassword } = req.body;
+
+    const recoveryValidationError = validateUser.validateRecovery({ password, confirmPassword });
+    if (recoveryValidationError) {
+      return res.status(400).json(recoveryValidationError);
+    }
+
+    const storedRecovery = tempUsers[email];
+
+    if (
+      !storedRecovery ||
+      storedRecovery.verificationCode !== code ||
+      Date.now() > storedRecovery.expiresAt
+    ) {
+      return res
+        .status(401)
+        .json({ error: "Código de recuperação inválido ou expirado." });
+    }
+
+    try {
+      const saltRounds = Number(process.env.SALT_ROUNDS);
+      const hashedPassword = bcrypt.hashSync(password, saltRounds);
+
+      const updateQuery = `UPDATE user SET hashedPassword = ? WHERE email = ?`;
+      await queryAsync(updateQuery, [hashedPassword, email]);
+
+      delete tempUsers[email];
+
+      return res.status(200).json({
+        message: "Senha alterada com sucesso.",
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro Interno do Servidor" });
+    }
+  }
 };
-
-/*
-curl --location 'http://localhost:5000/stock/user/login' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "email": "joao.silva@sp.senai.br",
-    "password": "Joao.1234"
-}'
-
-curl --location 'http://localhost:5000/stock/users' \
---header 'Content-Type: application/json' \
---header 'Authorization: {userToken}'
-
-curl --location 'http://localhost:5000/stock/user/register' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "name": "Vinicius Fogaça",
-    "email": "vinicius.f.cintra@aluno.senai.br",
-    "password": "Vinicius.3456",
-    "confirmPassword": "Vinicius.3456"
-}'
-
-curl --location 'http://localhost:5000/stock/user/verify-register' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "email": "vinicius.f.cintra@aluno.senai.br",
-    "code": "{mailCode}"
-}'
-
-curl --location --request PUT 'http://localhost:5000/stock/user/2' \
---header 'Content-Type: application/json' \
---header 'Authorization: {userToken}' \
---data-raw '{
-    "name": "Vinicius Fogaça Cintra",
-    "email": "vinicius.f.cintra@aluno.senai.br",
-    "password": "Vinicius.9871",
-    "confirmPassword": "Vinicius.9871"
-}'
-
-curl --location 'http://localhost:5000/stock/user/verify-update' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "email": "vinicius.f.cintra@aluno.senai.br",
-    "code": "{mailCode}"
-}'
-
-curl --location --request DELETE 'http://localhost:5000/stock/user/2' \
---header 'Content-Type: application/json' \
---header 'Authorization: {userToken}'
-*/

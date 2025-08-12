@@ -74,8 +74,30 @@ async function sendDeletionEmail(email, name) {
     }
 }
 
+async function sendPasswordRecoveryEmail(email, code) {
+    try {
+        const templatePath = path.join(__dirname, 'templates', 'passwordReset.html');
+        let htmlTemplate = await fs.readFile(templatePath, 'utf8');
+        htmlTemplate = htmlTemplate.replace('{{code}}', code);
+        
+        const mailOptions = {
+            from: process.env.GMAIL_USER,
+            to: email,
+            subject: 'Recuperação de Senha',
+            html: htmlTemplate,
+        };
+
+        await transporter.sendMail(mailOptions);
+        return true;
+    } catch (error) {
+        console.error("Erro ao enviar e-mail de atualização de senha:", error);
+        return false;
+    }
+}
+
 module.exports = {
     sendVerificationEmail,
     sendProfileUpdatedEmail,
     sendDeletionEmail,
+    sendPasswordRecoveryEmail
 };
