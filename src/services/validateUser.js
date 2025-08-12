@@ -81,9 +81,26 @@ const validateUpdate = function ({ name, email, password, confirmPassword }) {
   return null;
 };
 
+const validateRecovery = function ({password, confirmPassword}) {
+    if (!password || !confirmPassword) {
+      return { error: "A senha e confirmação de senha são obrigatórias." };
+    }
+    if (password !== confirmPassword) {
+      return { error: "As senhas não coincidem." };
+    }
+    if (!validatePassword(password)) {
+      return {
+        error:
+          "A nova senha deve ter no mínimo 8 caracteres, incluindo letras, números e um caractere especial.",
+      };
+    }
+    return null;
+  }
+
 module.exports = {
   validateUser,
   validateEmail,
   validateLogin,
   validateUpdate,
+  validateRecovery
 };
