@@ -211,7 +211,9 @@ module.exports = class usuarioController {
           oldEmail: userToUpdate.email,
           newEmail: email,
           password: password,
-          hashedPassword: password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword,
+          hashedPassword: password
+            ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS))
+            : userToUpdate.hashedPassword,
           verificationCode,
           expiresAt: Date.now() + 5 * 60 * 1000,
         };
@@ -238,10 +240,14 @@ module.exports = class usuarioController {
       }
 
       if (fieldsToUpdate.length === 0) {
-        return res.status(400).json({ error: "Nenhum campo para atualizar foi fornecido." });
+        return res
+          .status(400)
+          .json({ error: "Nenhum campo para atualizar foi fornecido." });
       }
 
-      const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
+      const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(
+        ", "
+      )} WHERE idUser = ?`;
       values.push(idUser);
 
       await queryAsync(updateQuery, values);
@@ -298,7 +304,9 @@ module.exports = class usuarioController {
       fieldsToUpdate.push("hashedPassword = ?");
       values.push(hashedPassword);
 
-      const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
+      const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(
+        ", "
+      )} WHERE idUser = ?`;
       values.push(idUser);
 
       await queryAsync(updateQuery, values);
@@ -388,12 +396,13 @@ module.exports = class usuarioController {
     }
   }
 
-  static async recoveryPassword(req, res) {
-    const { email, code, password, confirmPassword } = req.body;
+  static async validateRecoveryCode(req, res) {
+    const { email, code } = req.body;
 
-    const recoveryValidationError = validateUser.validateRecovery({ password, confirmPassword });
-    if (recoveryValidationError) {
-      return res.status(400).json(recoveryValidationError);
+    if (!email || !code) {
+      return res
+        .status(400)
+        .json({ error: "E-mail e código são obrigatórios." });
     }
 
     const storedRecovery = tempUsers[email];
@@ -406,6 +415,34 @@ module.exports = class usuarioController {
       return res
         .status(401)
         .json({ error: "Código de recuperação inválido ou expirado." });
+    }
+
+    return res.status(200).json({
+      message:
+        "Código de recuperação validado com sucesso. Agora você pode alterar sua senha.",
+    });
+  }
+
+  static async recoveryPassword(req, res) {
+    const { email, password, confirmPassword } = req.body;
+
+    const storedRecovery = tempUsers[email];
+
+    if (!storedRecovery || Date.now() > storedRecovery.expiresAt) {
+      return res
+        .status(401)
+        .json({
+          error:
+            "Código de recuperação inválido ou expirado. Por favor, solicite um novo código.",
+        });
+    }
+
+    const recoveryValidationError = validateUser.validateRecovery({
+      password,
+      confirmPassword,
+    });
+    if (recoveryValidationError) {
+      return res.status(400).json(recoveryValidationError);
     }
 
     try {
