@@ -73,13 +73,13 @@ router.put("/transaction/:idTransaction", verifyJWT, transactionController.updat
 router.delete("/transaction/:idTransaction", verifyJWT, transactionController.deleteTransaction);
 
 router.put("/ajust", verifyJWT, async (req, res) => {
-    try {
-        const { fkIdUser, itemType, itemId, newQuantity } = req.body;
-        await transactionController.ajust(fkIdUser, itemType, itemId, newQuantity);
-        res.status(200).json({ message: "Ajuste realizado com sucesso." });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try {
+        const { fkIdUser, itemType, itemId, newQuantity } = req.body;
+            await transactionController.ajust(fkIdUser, itemType, itemId, newQuantity);
+        res.status(200).json({ message: "Ajuste realizado com sucesso." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;
