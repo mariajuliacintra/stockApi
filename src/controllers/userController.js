@@ -9,7 +9,7 @@ const bcrypt = require("bcrypt");
 
 const tempUsers = {};
 
-module.exports = class usuarioController {
+module.exports = class UserController {
   static async registerUser(req, res) {
     const { name, email, password, confirmPassword } = req.body;
 
@@ -64,7 +64,7 @@ module.exports = class usuarioController {
     if (!email || !code) {
       return res
         .status(400)
-        .json({ error: "E-mail e código são obrigatórios." });
+        .json({ error: "E-mail e código são obrigatórios.", auth: false });
     }
 
     const storedUser = tempUsers[email];
@@ -76,7 +76,7 @@ module.exports = class usuarioController {
     ) {
       return res
         .status(401)
-        .json({ error: "Código de verificação inválido ou expirado." });
+        .json({ error: "Código de verificação inválido ou expirado.", auth: false });
     }
 
     try {
@@ -89,13 +89,14 @@ module.exports = class usuarioController {
       const results = await queryAsync(querySelect, [email]);
 
       if (results.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado" });
+        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
       }
 
       const user = results[0];
       const token = createToken({
-        id: user.idUser,
+        idUser: user.idUser,
         email: user.email,
+        role: user.role,
       });
 
       delete tempUsers[email];
@@ -104,10 +105,11 @@ module.exports = class usuarioController {
         message: "Cadastro bem-sucedido",
         user,
         token,
+        auth: true,
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
+      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
     }
   }
 
@@ -116,7 +118,7 @@ module.exports = class usuarioController {
 
     const loginValidationError = validateUser.validateLogin(req.body);
     if (loginValidationError) {
-      return res.status(400).json(loginValidationError);
+      return res.status(400).json({ ...loginValidationError, auth: false });
     }
 
     const query = `SELECT * FROM user WHERE email = ?`;
@@ -125,29 +127,31 @@ module.exports = class usuarioController {
       const results = await queryAsync(query, [email]);
 
       if (results.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado" });
+        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
       }
 
       const user = results[0];
       const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
 
       if (!passwordOK) {
-        return res.status(401).json({ error: "Senha Incorreta" });
+        return res.status(401).json({ error: "Senha Incorreta", auth: false });
       }
 
       const token = createToken({
         idUser: user.idUser,
         email: user.email,
+        role: user.role,
       });
 
       return res.status(200).json({
         message: "Login Bem-sucedido",
         user,
         token,
+        auth: true,
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
+      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
     }
   }
 
@@ -157,10 +161,10 @@ module.exports = class usuarioController {
       const results = await queryAsync(query);
       return res
         .status(200)
-        .json({ message: "Obtendo todos os usuários", users: results });
+        .json({ message: "Obtendo todos os usuários", users: results, auth: true });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
+      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
     }
   }
 
@@ -169,19 +173,19 @@ module.exports = class usuarioController {
     const { name, email, password, confirmPassword } = req.body;
 
     if (req.userId != idUser) {
-      return res.status(403).json({ error: "Não autorizado" });
+      return res.status(403).json({ error: "Não autorizado", auth: false });
     }
 
     const updateValidationError = validateUser.validateUpdate(req.body, idUser);
     if (updateValidationError) {
-      return res.status(400).json(updateValidationError);
+      return res.status(400).json({ ...updateValidationError, auth: false });
     }
 
     try {
       const userExistsQuery = `SELECT * FROM user WHERE idUser = ?`;
       const userExistsResults = await queryAsync(userExistsQuery, [idUser]);
       if (userExistsResults.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado" });
+        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
       }
 
       const userToUpdate = userExistsResults[0];
@@ -189,7 +193,7 @@ module.exports = class usuarioController {
       if (email && email !== userToUpdate.email) {
         const emailValidationError = await validateUser.validateEmail(email);
         if (emailValidationError && emailValidationError.error) {
-          return res.status(400).json(emailValidationError);
+          return res.status(400).json({ ...emailValidationError, auth: false });
         }
 
         const verificationCode = generateRandomCode();
@@ -202,18 +206,19 @@ module.exports = class usuarioController {
         if (!emailSent) {
           return res
             .status(500)
-            .json({ error: "Erro ao enviar o e-mail de verificação." });
+            .json({ error: "Erro ao enviar o e-mail de verificação.", auth: false });
         }
+        
+        const hashedPassword = password
+          ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS))
+          : userToUpdate.hashedPassword;
 
         tempUsers[email] = {
           idUser,
           name: name || userToUpdate.name,
           oldEmail: userToUpdate.email,
           newEmail: email,
-          password: password,
-          hashedPassword: password
-            ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS))
-            : userToUpdate.hashedPassword,
+          hashedPassword,
           verificationCode,
           expiresAt: Date.now() + 5 * 60 * 1000,
         };
@@ -221,6 +226,7 @@ module.exports = class usuarioController {
         return res.status(200).json({
           message:
             "Verificação de e-mail necessária. Um código foi enviado para o novo e-mail.",
+          auth: true,
         });
       }
 
@@ -242,7 +248,7 @@ module.exports = class usuarioController {
       if (fieldsToUpdate.length === 0) {
         return res
           .status(400)
-          .json({ error: "Nenhum campo para atualizar foi fornecido." });
+          .json({ error: "Nenhum campo para atualizar foi fornecido.", auth: true });
       }
 
       const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(
@@ -256,15 +262,16 @@ module.exports = class usuarioController {
       const updatedUserResults = await queryAsync(updatedUserQuery, [idUser]);
       const updatedUser = updatedUserResults[0];
 
-      mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
+      await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
 
       return res.status(200).json({
         message: "Usuário atualizado com sucesso.",
         user: updatedUser,
+        auth: true,
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
+      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
     }
   }
 
@@ -274,7 +281,7 @@ module.exports = class usuarioController {
     if (!email || !code) {
       return res
         .status(400)
-        .json({ error: "E-mail e código são obrigatórios." });
+        .json({ error: "E-mail e código são obrigatórios.", auth: false });
     }
 
     const storedUpdate = tempUsers[email];
@@ -286,7 +293,7 @@ module.exports = class usuarioController {
     ) {
       return res
         .status(401)
-        .json({ error: "Código de verificação inválido ou expirado." });
+        .json({ error: "Código de verificação inválido ou expirado.", auth: false });
     }
 
     try {
@@ -317,15 +324,16 @@ module.exports = class usuarioController {
 
       delete tempUsers[email];
 
-      mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
+      await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
 
       return res.status(200).json({
         message: "Usuário atualizado com sucesso.",
         user: updatedUser,
+        auth: true,
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
+      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
     }
   }
 
@@ -333,14 +341,14 @@ module.exports = class usuarioController {
     const { idUser } = req.params;
 
     if (req.userId != idUser) {
-      return res.status(403).json({ error: "Não autorizado" });
+      return res.status(403).json({ error: "Não autorizado", auth: false });
     }
 
     try {
       const userExistsQuery = `SELECT idUser, name, email FROM user WHERE idUser = ?`;
       const userExistsResults = await queryAsync(userExistsQuery, [idUser]);
       if (userExistsResults.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado" });
+        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
       }
 
       const userToDelete = userExistsResults[0];
@@ -348,14 +356,15 @@ module.exports = class usuarioController {
       const deleteQuery = `DELETE FROM user WHERE idUser = ?`;
       await queryAsync(deleteQuery, [idUser]);
 
-      mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
+      await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
 
       return res.status(200).json({
         message: "Usuário deletado com sucesso.",
+        auth: true,
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
+      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
     }
   }
 
@@ -462,4 +471,4 @@ module.exports = class usuarioController {
       return res.status(500).json({ error: "Erro Interno do Servidor" });
     }
   }
-};
+}
