@@ -20,8 +20,9 @@ router.post("/user/verify-update", usuarioController.verifyUpdate);
 router.delete("/user/:idUser", verifyJWT, usuarioController.deleteUser);
 router.get("/users", verifyJWT, usuarioController.getAllUsers);
 
-router.post("/user/recovery-password", usuarioController.recoveryPassword);
-router.post("/user/verify-recovery", usuarioController.verifyRecoveryPassword);
+router.post("/user/verify-recovery-password", usuarioController.verifyRecoveryPassword); // Envia e-mail
+router.post("/user/validate-recovery-code", usuarioController.validateRecoveryCode); // Valida Código
+router.post("/user/recovery-password", usuarioController.recoveryPassword); // Altera Senha
 
 router.post("/location", verifyJWT, locationController.createLocation);
 router.get("/locations", verifyJWT, locationController.getAllLocations);
@@ -71,15 +72,14 @@ router.get("/transaction/:idTransaction", verifyJWT, transactionController.getTr
 router.put("/transaction/:idTransaction", verifyJWT, transactionController.updateTransaction);
 router.delete("/transaction/:idTransaction", verifyJWT, transactionController.deleteTransaction);
 
-// Route for AJUST using transactionController
 router.put("/ajust", verifyJWT, async (req, res) => {
-    try {
-        const { fkIdUser, itemType, itemId, newQuantity } = req.body;
-        await transactionController.ajust(fkIdUser, itemType, itemId, newQuantity);
-        res.status(200).json({ message: "Ajuste realizado com sucesso." });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try {
+        const { fkIdUser, itemType, itemId, newQuantity } = req.body;
+        await transactionController.ajust(fkIdUser, itemType, itemId, newQuantity);
+        res.status(200).json({ message: "Ajuste realizado com sucesso." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;
