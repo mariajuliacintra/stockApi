@@ -1,6 +1,6 @@
 const router = require("express").Router();
 
-const usuarioController = require("../controllers/userController");
+const userController = require("../controllers/userController");
 const transactionController = require("../controllers/transactionController");
 const toolController = require("../controllers/itemsControllers/toolController");
 const materialController = require("../controllers/itemsControllers/materialController");
@@ -11,18 +11,19 @@ const diversesController = require("../controllers/itemsControllers/diversesCont
 const locationController = require("../controllers/locationController");
 
 const verifyJWT = require("../middlewares/verifyJWT");
+const authorizeManager = require("../middlewares/authorizeManager");
 
-router.post("/user/register", usuarioController.registerUser);
-router.post("/user/verify-register", usuarioController.verifyUser);
-router.post("/user/login", usuarioController.loginUser);
-router.put("/user/:idUser", verifyJWT, usuarioController.updateUser);
-router.post("/user/verify-update", usuarioController.verifyUpdate);
-router.delete("/user/:idUser", verifyJWT, usuarioController.deleteUser);
-router.get("/users", verifyJWT, usuarioController.getAllUsers);
+router.post("/user/register", userController.registerUser);
+router.post("/user/verify-register", userController.verifyUser);
+router.post("/user/login", userController.loginUser);
+router.put("/user/:idUser", verifyJWT, userController.updateUser);
+router.post("/user/verify-update", userController.verifyUpdate);
+router.delete("/user/:idUser", verifyJWT, userController.deleteUser);
+router.get("/users", verifyJWT, authorizeManager, userController.getAllUsers);
 
-router.post("/user/verify-recovery-password", usuarioController.verifyRecoveryPassword); // Envia e-mail
-router.post("/user/validate-recovery-code", usuarioController.validateRecoveryCode); // Valida Código
-router.post("/user/recovery-password", usuarioController.recoveryPassword); // Altera Senha
+router.post("/user/verify-recovery-password", userController.verifyRecoveryPassword); // Envia e-mail
+router.post("/user/validate-recovery-code", userController.validateRecoveryCode); // Valida Código
+router.post("/user/recovery-password", userController.recoveryPassword); // Altera Senha
 
 router.post("/location", verifyJWT, locationController.createLocation);
 router.get("/locations", verifyJWT, locationController.getAllLocations);
@@ -66,13 +67,13 @@ router.get("/diverse/:idDiverses", verifyJWT, diversesController.getDiversesById
 router.put("/diverse/:idDiverses", verifyJWT, diversesController.updateDiverses);
 router.delete("/diverse/:idDiverses", verifyJWT, diversesController.deleteDiverses);
 
-router.post("/transaction", verifyJWT, transactionController.createTransactionFromRequest);
-router.get("/transactions", verifyJWT, transactionController.getAllTransactions);
-router.get("/transaction/:idTransaction", verifyJWT, transactionController.getTransactionById);
-router.put("/transaction/:idTransaction", verifyJWT, transactionController.updateTransaction);
-router.delete("/transaction/:idTransaction", verifyJWT, transactionController.deleteTransaction);
+router.post("/transaction", verifyJWT, authorizeManager, transactionController.createTransactionFromRequest);
+router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
+router.get("/transaction/:idTransaction", authorizeManager, verifyJWT, transactionController.getTransactionById);
+router.put("/transaction/:idTransaction", verifyJWT, authorizeManager, transactionController.updateTransaction);
+router.delete("/transaction/:idTransaction", verifyJWT, authorizeManager, transactionController.deleteTransaction);
 
-router.put("/ajust", verifyJWT, async (req, res) => {
+router.put("/ajust", verifyJWT, authorizeManager, async (req, res) => {
     try {
         const { fkIdUser, itemType, itemId, newQuantity } = req.body;
             await transactionController.ajust(fkIdUser, itemType, itemId, newQuantity);
