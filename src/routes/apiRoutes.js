@@ -34,36 +34,42 @@ router.delete("/location/:idLocation", verifyJWT, locationController.deleteLocat
 router.post("/tool", verifyJWT, toolController.createTool);
 router.get("/tools", verifyJWT, toolController.getAllTools);
 router.get("/tool/:idTool", verifyJWT, toolController.getToolById);
+router.get("/tools/search", verifyJWT, toolController.searchToolsByName);
 router.put("/tool/:idTool", verifyJWT, toolController.updateTool);
 router.delete("/tool/:idTool", verifyJWT, toolController.deleteTool);
 
 router.post("/material", verifyJWT, materialController.createMaterial);
 router.get("/materials", verifyJWT, materialController.getAllMaterials);
 router.get("/material/:idMaterial", verifyJWT, materialController.getMaterialById);
+router.get("/materials/search", verifyJWT, materialController.searchMaterialByName);
 router.put("/material/:idMaterial", verifyJWT, materialController.updateMaterial);
 router.delete("/material/:idMaterial", verifyJWT, materialController.deleteMaterial);
 
 router.post("/rawMaterial", verifyJWT, rawMaterialController.createRawMaterial);
 router.get("/rawMaterials", verifyJWT, rawMaterialController.getAllRawMaterials);
 router.get("/rawMaterial/:idRawMaterial", verifyJWT, rawMaterialController.getRawMaterialById);
+router.get("/rawMaterials/search", verifyJWT, rawMaterialController.searchRawMaterialsByName);
 router.put("/rawMaterial/:idRawMaterial", verifyJWT, rawMaterialController.updateRawMaterial);
 router.delete("/rawMaterial/:idRawMaterial", verifyJWT, rawMaterialController.deleteRawMaterial);
 
 router.post("/equipment", verifyJWT, equipmentController.createEquipment);
 router.get("/equipments", verifyJWT, equipmentController.getAllEquipment);
 router.get("/equipment/:idEquipment", verifyJWT, equipmentController.getEquipmentById);
+router.get("/equipments/search", verifyJWT, equipmentController.searchEquipmentByName);
 router.put("/equipment/:idEquipment", verifyJWT, equipmentController.updateEquipment);
 router.delete("/equipment/:idEquipment", verifyJWT, equipmentController.deleteEquipment);
 
 router.post("/product", verifyJWT, productController.createProduct);
 router.get("/products", verifyJWT, productController.getAllProducts);
 router.get("/product/:idProduct", verifyJWT, productController.getProductById);
+router.get("/products/search", verifyJWT, productController.searchProductByName);
 router.put("/product/:idProduct", verifyJWT, productController.updateProduct);
 router.delete("/product/:idProduct", verifyJWT, productController.deleteProduct);
 
 router.post("/diverses", verifyJWT, diversesController.createDiverses);
 router.get("/diverses", verifyJWT, diversesController.getAllDiverses);
 router.get("/diverse/:idDiverses", verifyJWT, diversesController.getDiversesById);
+router.get("/diverses/search", verifyJWT, diversesController.searchDiversesByName);
 router.put("/diverse/:idDiverses", verifyJWT, diversesController.updateDiverses);
 router.delete("/diverse/:idDiverses", verifyJWT, diversesController.deleteDiverses);
 
