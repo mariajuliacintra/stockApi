@@ -3,8 +3,8 @@ const { queryAsync } = require("../utils/functions");
 module.exports = class TransactionController {
     static async createTransaction(fkIdUser, itemType, itemId, actionDescription, quantityChange, oldQuantity, newQuantity) {
         const query = `
-            INSERT INTO transactions (fkIdUser, itemType, itemId, actionDescription, quantityChange, oldQuantity, newQuantity, transactionDate)
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO transactions (fkIdUser, itemType, itemId, actionDescription, quantityChange, oldQuantity, newQuantity)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         const values = [fkIdUser, itemType, itemId, actionDescription, quantityChange, oldQuantity, newQuantity];
 
