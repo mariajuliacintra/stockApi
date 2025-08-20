@@ -9,6 +9,7 @@ const equipmentController = require("../controllers/itemsControllers/equipmentCo
 const productController = require("../controllers/itemsControllers/productController");
 const diversesController = require("../controllers/itemsControllers/diversesController");
 const locationController = require("../controllers/locationController");
+const reportController = require("../controllers/reportController");
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
@@ -78,6 +79,14 @@ router.get("/transactions", verifyJWT, authorizeManager, transactionController.g
 router.get("/transaction/:idTransaction", authorizeManager, verifyJWT, transactionController.getTransactionById);
 router.put("/transaction/:idTransaction", verifyJWT, authorizeManager, transactionController.updateTransaction);
 router.delete("/transaction/:idTransaction", verifyJWT, authorizeManager, transactionController.deleteTransaction);
+
+router.get("/report/general", verifyJWT, authorizeManager, reportController.generateGeneralReport);
+router.get("/report/low-stock", verifyJWT, authorizeManager, reportController.generateLowStockReport);
+router.get("/report/transactions", verifyJWT, authorizeManager, reportController.generateTransactionsReport);
+router.get("/report/by-location", verifyJWT, authorizeManager, reportController.generateByLocationReport);
+router.get("/report/raw-material-consumption", verifyJWT, authorizeManager, reportController.generateRawMaterialConsumptionReport);
+router.get("/report/equipments", verifyJWT, authorizeManager, reportController.generateEquipmentsReport);
+router.get("/report/users", verifyJWT, authorizeManager, reportController.generateUsersReport);
 
 router.put("/ajust", verifyJWT, authorizeManager, async (req, res) => {
     try {
