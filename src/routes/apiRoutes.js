@@ -84,8 +84,6 @@ router.get("/report/general", verifyJWT, authorizeManager, reportController.gene
 router.get("/report/low-stock", verifyJWT, authorizeManager, reportController.generateLowStockReport);
 router.get("/report/transactions", verifyJWT, authorizeManager, reportController.generateTransactionsReport);
 router.get("/report/by-location", verifyJWT, authorizeManager, reportController.generateByLocationReport);
-router.get("/report/raw-material-consumption", verifyJWT, authorizeManager, reportController.generateRawMaterialConsumptionReport);
-router.get("/report/equipments", verifyJWT, authorizeManager, reportController.generateEquipmentsReport);
 router.get("/report/users", verifyJWT, authorizeManager, reportController.generateUsersReport);
 
 router.put("/ajust", verifyJWT, authorizeManager, async (req, res) => {
