@@ -14,8 +14,8 @@ DROP TABLE IF EXISTS location;
 CREATE TABLE location (
     idLocation INT PRIMARY KEY AUTO_INCREMENT,
     place VARCHAR(255) NOT NULL,
-    locationCode VARCHAR(255) NOT NULL,
-    UNIQUE(place, locationCode)
+    code VARCHAR(255) NOT NULL,
+    UNIQUE(place, code)
 );
 
 CREATE TABLE user (
@@ -23,7 +23,9 @@ CREATE TABLE user (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     hashedPassword VARCHAR(255) NOT NULL,
-    role VARCHAR(255) NOT NULL CHECK (role IN ('user', 'manager'))
+    role VARCHAR(255) NOT NULL CHECK (role IN ('user', 'manager')),
+    createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE tool (
@@ -35,7 +37,7 @@ CREATE TABLE tool (
     technicalSpecs TEXT,
     quantity INT NOT NULL DEFAULT 0,
     lastMaintenance DATE,
-    batchNumber VARCHAR(255) UNIQUE,
+    batchNumber VARCHAR(255) NOT NULL UNIQUE,
     fkIdLocation INT,
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
@@ -49,7 +51,7 @@ CREATE TABLE material (
     technicalSpecs TEXT,
     quantity DECIMAL(10, 2) NOT NULL DEFAULT 0.0,
     expirationDate DATE,
-    batchNumber VARCHAR(255) UNIQUE,
+    batchNumber VARCHAR(255) NOT NULL UNIQUE,
     fkIdLocation INT,
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
@@ -62,7 +64,7 @@ CREATE TABLE rawMaterial (
     description TEXT,
     technicalSpecs TEXT,
     quantity DECIMAL(10, 2) NOT NULL DEFAULT 0.0,
-    batchNumber VARCHAR(255) UNIQUE,
+    batchNumber VARCHAR(255) NOT NULL UNIQUE,
     fkIdLocation INT,
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
@@ -75,7 +77,7 @@ CREATE TABLE equipment (
     description TEXT,
     technicalSpecs TEXT,
     quantity INT NOT NULL DEFAULT 0,
-    batchNumber VARCHAR(255) UNIQUE,
+    batchNumber VARCHAR(255) NOT NULL UNIQUE,
     fkIdLocation INT,
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
@@ -89,7 +91,7 @@ CREATE TABLE product (
     technicalSpecs TEXT,
     quantity INT NOT NULL DEFAULT 0,
     expirationDate DATE,
-    batchNumber VARCHAR(255) UNIQUE,
+    batchNumber VARCHAR(255) NOT NULL UNIQUE,
     fkIdLocation INT,
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
@@ -103,7 +105,7 @@ CREATE TABLE diverses (
     technicalSpecs TEXT,
     quantity DECIMAL(10, 2) NOT NULL DEFAULT 0.0,
     expirationDate DATE,
-    batchNumber VARCHAR(255) UNIQUE,
+    batchNumber VARCHAR(255) NOT NULL UNIQUE,
     fkIdLocation INT,
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
 );
@@ -117,7 +119,7 @@ CREATE TABLE transactions (
     quantityChange DECIMAL(10, 2) NOT NULL,
     oldQuantity DECIMAL(10, 2),
     newQuantity DECIMAL(10, 2),
-    transactionDate DATETIME NOT NULL,
+    transactionDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (fkIdUser) REFERENCES user(idUser)
 );
 
@@ -139,7 +141,7 @@ CREATE INDEX idxTransactionsDate ON transactions(transactionDate);
 CREATE INDEX idxTransactionsAction ON transactions(actionDescription);
 CREATE INDEX idxTransactionsItem ON transactions(itemType, itemId);
 
-INSERT INTO location (place, locationCode) VALUES
+INSERT INTO location (place, code) VALUES
 ('Prateleira', 'A1'),
 ('Prateleira', 'A2'),
 ('Prateleira', 'A3'),
