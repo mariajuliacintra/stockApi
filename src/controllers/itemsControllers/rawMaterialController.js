@@ -81,7 +81,7 @@ module.exports = class RawMaterialController {
   static async searchRawMaterialsByName(req, res) {
     const { name } = req.query;
     const query = "SELECT * FROM rawMaterial WHERE LOWER(name) LIKE LOWER(?)";
-    const values = [`${name}%`]; // nomes que começam com o texto digitado
+    const values = [`${name}%`]; 
 
     try {
       const results = await queryAsync(query, values);
