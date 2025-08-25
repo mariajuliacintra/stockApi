@@ -95,9 +95,44 @@ async function sendPasswordRecoveryEmail(email, code) {
     }
 }
 
+async function sendWarningEmail(toEmails, items) {
+    try {
+        const templatePath = path.join(__dirname, 'templates', 'warningEmail.html');
+        let htmlTemplate = await fs.readFile(templatePath, 'utf8');
+
+        let itemsHtml = '';
+        items.forEach(item => {
+            itemsHtml += `
+            <tr>
+                <td>${item.itemType}</td>
+                <td>${item.name}</td>
+                <td>${item.batchNumber}</td>
+                <td>${item.expirationDate ? new Date(item.expirationDate).toLocaleDateString('pt-BR') : 'N/A'}</td>
+                <td>${item.status}</td>
+            </tr>
+            `;
+        });
+
+        htmlTemplate = htmlTemplate.replace('{{items}}', itemsHtml);
+
+        const mailOptions = {
+            from: process.env.GMAIL_USER,
+            to: toEmails.join(', '),
+            subject: 'Aviso de Validade de Itens de Estoque',
+            html: htmlTemplate,
+        };
+
+        await transporter.sendMail(mailOptions);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
 module.exports = {
     sendVerificationEmail,
     sendProfileUpdatedEmail,
     sendDeletionEmail,
-    sendPasswordRecoveryEmail
+    sendPasswordRecoveryEmail,
+    sendWarningEmail
 };

@@ -156,8 +156,9 @@ INSERT INTO location (place, code) VALUES
 ('Depósito', 'D3');
 
 INSERT INTO user (name, email, hashedPassword, role) VALUES
-('João Silva', 'joao.silva@sp.senai.br', '$2a$12$pUpODOURw.nIEgqGiT4sNuPPoesLu.9rg4dTyikxPGOiyMQUDzVZu', 'manager'),
-('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
+('João Silva', 'joao.silva@sp.senai.br', '$2a$12$pUpODOURw.nIEgqGiT4sNuPPoesLu.9rg4dTyikxPGOiyMQUDzVZu', 'manager'), -- Joao.1234
+('Vinicius Fogaça', 'vfogacacintra@gmail.com', '$2a$12$Dgp7DDOLi91NJYR0abt.yuwSy7dDHDuS3wp/QRw02rs06HqDMr8WS', 'manager'), -- Vini.3456
+('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user'); -- Maria.2345
 
 INSERT INTO tool (name, aliases, brand, description, technicalSpecs, quantity, lastMaintenance, batchNumber, fkIdLocation) VALUES
 ('Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 15, '2025-01-10', 'MRT-202501-001', 1),
@@ -210,7 +211,7 @@ INSERT INTO equipment (name, aliases, brand, description, technicalSpecs, quanti
 INSERT INTO product (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchNumber, fkIdLocation) VALUES
 ('Solvente Desengraxante', 'Limpa Peças, Removedor de Graxa', 'Quimisa', 'Industrial', '5L', 20, '2026-11-01', 'SDI-202611-026', 10),
 ('Adesivo Epóxi', 'Cola Epóxi, Resina Epóxi', 'Loctite', 'Bicomponente', '500g', 15, '2025-10-15', 'AEB-202510-027', 8),
-('Tinta Spray', 'Tinta em Aerossol, Lata de Spray', 'Suvinil', 'Fosca, preta', '400ml', 30, '2027-05-20', 'TSF-202705-028', 1),
+('Tinta Spray', 'Tinta em Aerossol, Lata de Spray', 'Suvinil', 'Fosca, preta', '400ml', 30, '2025-05-20', 'TSF-202705-028', 1),
 ('Graxa Multiuso', 'Graxa para Rolamentos, Graxa Lubrificante', 'Bardahl', 'Tubo de aplicação', '1kg', 10, '2026-08-01', 'GMU-202608-029', 11),
 ('Kit Limpeza', 'Kit de Higienização, Kit de Manutenção', 'Wurth', 'Pincéis e panos', '5 peças', 5, NULL, 'KLF-202507-030', 4),
 ('Desmoldante', 'Agente Desmoldante, Spray de Silicone', 'Tekbond', 'Spray de silicone', '300ml', 12, '2027-03-01', 'DSV-202703-031', 12),
