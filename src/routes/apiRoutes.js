@@ -10,6 +10,8 @@ const productController = require("../controllers/itemsControllers/productContro
 const diversesController = require("../controllers/itemsControllers/diversesController");
 const locationController = require("../controllers/locationController");
 const reportController = require("../controllers/reportController");
+const excelReportController = require("../controllers/excelReportController");
+
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
@@ -85,6 +87,12 @@ router.get("/report/low-stock", verifyJWT, authorizeManager, reportController.ge
 router.get("/report/transactions", verifyJWT, authorizeManager, reportController.generateTransactionsReport);
 router.get("/report/by-location", verifyJWT, authorizeManager, reportController.generateByLocationReport);
 router.get("/report/users", verifyJWT, authorizeManager, reportController.generateUsersReport);
+
+router.get("/report/excel/dashboard", verifyJWT, authorizeManager, excelReportController.generateDashboardReport);
+// router.get("/report/excel/by-location", verifyJWT, authorizeManager, excelReportController.generateByLocationReport);
+// router.get("/report/excel/low-stock", verifyJWT, authorizeManager, excelReportController.generateLowStockReport);
+// router.get("/report/excel/movements", verifyJWT, authorizeManager, excelReportController.generateMovementsReport);
+// router.get("/report/excel/history", verifyJWT, authorizeManager, excelReportController.generateHistoryReport);
 
 router.put("/ajust", verifyJWT, authorizeManager, async (req, res) => {
     try {
