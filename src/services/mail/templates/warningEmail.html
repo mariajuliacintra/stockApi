@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aviso de Validade de Itens</title>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f3f4f6;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .email-container {
+            max-width: 48rem;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 100%;
+            text-align: center;
+        }
+
+        .header {
+            background-color: #dc2626;
+            padding: 1.5rem;
+        }
+
+        .header img {
+            height: 2.5rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+        
+        .content h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+
+        .content p {
+            color: #4b5563;
+            line-height: 1.5;
+            margin-bottom: 1rem;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+        }
+        
+        .items-table th, .items-table td {
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        
+        .items-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .footer {
+            background-color: #f3f4f6;
+            padding: 1rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/SENAI_S%C3%A3o_Paulo_logo.png/1200px-SENAI_S%C3%A3o_Paulo_logo.png" alt="Logo Estoque SENAI" class="logo">
+        </div>
+
+        <div class="content">
+            <h1>Aviso de Validade de Itens</h1>
+            
+            <p>Olá,</p>
+            
+            <p>
+                A verificação automática de estoque encontrou itens que estão expirados ou próximos de sua data de validade.
+            </p>
+            
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Nome</th>
+                        <th>Lote</th>
+                        <th>Data de Validade</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{items}}
+                </tbody>
+            </table>
+            
+            <p>
+                Por favor, verifique o sistema de estoque para tomar as medidas necessárias.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Atenciosamente,<br><strong>Equipe Estoque SENAI</strong></p>
+        </div>
+    </div>
+</body>
+</html>

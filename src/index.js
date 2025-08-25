@@ -8,6 +8,7 @@ class AppController {
     this.middlewares();
     this.routes();
     testConnect();
+    require('./services/cronjobVerification');
   }
   middlewares() {
     this.express.use(express.json());
