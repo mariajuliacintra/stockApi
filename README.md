@@ -52,10 +52,15 @@ Passos:
 
 -Ative a Verificação em Duas Etapas na sua conta Google: Configurações de Segurança
 -Vá até Senhas de App
+
 -App: Correio
+
 -Dispositivo: escolha Outro (ex: “API Projeto”)
+
 -Gere a senha de 16 dígitos.
+
 -Copie essa senha e adicione no .env (gmail_pass):
+
 
 GMAIL_USER=seu.email@gmail.com
 GMAIL_PASS=sua_senha_de_16_digitos_gerada_aqui
@@ -94,6 +99,7 @@ Miguel Garrido Souza
 
 Yasmin Souza
 (https://github.com/souzayasmin)
+
 
 
 
