@@ -30,9 +30,9 @@ A API foi construída utilizando:
 ## 💻 Instalação
 
 ### Clonar o repositório
-
+```bash
 git clone https://github.com/mariajuliacintra/stockApi.git
-
+```
 
 dentro do projeto -->
 
@@ -59,7 +59,7 @@ Passos:
 
 GMAIL_USER=seu.email@gmail.com
 GMAIL_PASS=sua_senha_de_16_digitos_gerada_aqui
-
+```bash
 -- Para rodar a API localmente:
 npm install
 npm start
@@ -67,7 +67,7 @@ npm start
 -- Usando Docker
 docker compose build
 docker compose up
-
+```
 
 A API estará disponível no endereço configurado
 http://localhost:5000/stock
@@ -94,5 +94,6 @@ Miguel Garrido Souza
 
 Yasmin Souza
 (https://github.com/souzayasmin)
+
 
 
