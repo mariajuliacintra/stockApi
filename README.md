@@ -78,9 +78,11 @@ A API estará disponível no endereço configurado
 http://localhost:5000/stock
 
 👉 Documentação Completa - Endpoints
+
 https://www.notion.so/endpoints-24c9ea6603bd81a19209f3446f846808
 
 🔒 Autenticação
+
 A autenticação da API é feita via JWT.
 
 Fluxo:
@@ -90,7 +92,9 @@ O retorno será um JSON com a mensagem de sucesso + token JWT (POSTMAN).
 
 Para acessar as demais rotas protegidas, inclua o token no header da requisição:
 
+
 📬 Contato
+
 Vinicius Fogaça 
 (https://github.com/Fogazzaa)
 
@@ -99,6 +103,7 @@ Miguel Garrido Souza
 
 Yasmin Souza
 (https://github.com/souzayasmin)
+
 
 
 
