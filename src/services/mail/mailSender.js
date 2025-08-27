@@ -106,7 +106,7 @@ async function sendWarningEmail(toEmails, items) {
             <tr>
                 <td>${item.itemType}</td>
                 <td>${item.name}</td>
-                <td>${item.batchNumber}</td>
+                <td>${item.batchCode}</td>
                 <td>${item.expirationDate ? new Date(item.expirationDate).toLocaleDateString('pt-BR') : 'N/A'}</td>
                 <td>${item.status}</td>
             </tr>
@@ -125,6 +125,7 @@ async function sendWarningEmail(toEmails, items) {
         await transporter.sendMail(mailOptions);
         return true;
     } catch (error) {
+        console.error('Erro ao enviar e-mail de aviso:', error);
         return false;
     }
 }

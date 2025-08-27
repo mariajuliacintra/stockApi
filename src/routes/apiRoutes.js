@@ -1,15 +1,9 @@
 const router = require("express").Router();
 
-const userController = require("../controllers/userController");
-const transactionController = require("../controllers/transactionController");
-const toolController = require("../controllers/itemsControllers/toolController");
-const materialController = require("../controllers/itemsControllers/materialController");
-const rawMaterialController = require("../controllers/itemsControllers/rawMaterialController");
-const equipmentController = require("../controllers/itemsControllers/equipmentController");
-const productController = require("../controllers/itemsControllers/productController");
-const diversesController = require("../controllers/itemsControllers/diversesController");
-const locationController = require("../controllers/locationController");
 const reportController = require("../controllers/reportController");
+const userController = require("../controllers/userController");
+const itemController = require("../controllers/itemController");
+const locationController = require("../controllers/locationController");
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
@@ -22,78 +16,27 @@ router.post("/user/verify-update", userController.verifyUpdate);
 router.delete("/user/:idUser", verifyJWT, userController.deleteUser);
 router.get("/users", verifyJWT, authorizeManager, userController.getAllUsers);
 
-router.post("/user/verify-recovery-password", userController.verifyRecoveryPassword); // Envia e-mail
-router.post("/user/validate-recovery-code", userController.validateRecoveryCode); // Valida Código
-router.post("/user/recovery-password", userController.recoveryPassword); // Altera Senha
+router.post("/user/verify-recovery-password", userController.verifyRecoveryPassword);
+router.post("/user/validate-recovery-code", userController.validateRecoveryCode);
+router.post("/user/recovery-password", userController.recoveryPassword);
 
-router.post("/location", verifyJWT, locationController.createLocation);
-router.get("/locations", verifyJWT, locationController.getAllLocations);
+router.get("/item", verifyJWT, itemController.getAllItems);
+router.get("/item/:category", verifyJWT, itemController.getItemsByCategory);
+router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
+router.post("/item/withdraw", verifyJWT, authorizeManager, itemController.withdrawItem);
+router.put("/item/:idItem", verifyJWT, authorizeManager, itemController.updateItem);
+router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
+
+router.get("/location", verifyJWT, locationController.getLocations);
 router.get("/location/:idLocation", verifyJWT, locationController.getLocationById);
-router.put("/location/:idLocation", verifyJWT, locationController.updateLocation);
-router.delete("/location/:idLocation", verifyJWT, locationController.deleteLocation);
-
-router.post("/tool", verifyJWT, toolController.createTool);
-router.get("/tools", verifyJWT, toolController.getAllTools);
-router.get("/tool/:idTool", verifyJWT, toolController.getToolById);
-router.get("/tools/search", verifyJWT, toolController.searchToolsByName);
-router.put("/tool/:idTool", verifyJWT, toolController.updateTool);
-router.delete("/tool/:idTool", verifyJWT, toolController.deleteTool);
-
-router.post("/material", verifyJWT, materialController.createMaterial);
-router.get("/materials", verifyJWT, materialController.getAllMaterials);
-router.get("/material/:idMaterial", verifyJWT, materialController.getMaterialById);
-router.get("/materials/search", verifyJWT, materialController.searchMaterialByName);
-router.put("/material/:idMaterial", verifyJWT, materialController.updateMaterial);
-router.delete("/material/:idMaterial", verifyJWT, materialController.deleteMaterial);
-
-router.post("/rawMaterial", verifyJWT, rawMaterialController.createRawMaterial);
-router.get("/rawMaterials", verifyJWT, rawMaterialController.getAllRawMaterials);
-router.get("/rawMaterial/:idRawMaterial", verifyJWT, rawMaterialController.getRawMaterialById);
-router.get("/rawMaterials/search", verifyJWT, rawMaterialController.searchRawMaterialsByName);
-router.put("/rawMaterial/:idRawMaterial", verifyJWT, rawMaterialController.updateRawMaterial);
-router.delete("/rawMaterial/:idRawMaterial", verifyJWT, rawMaterialController.deleteRawMaterial);
-
-router.post("/equipment", verifyJWT, equipmentController.createEquipment);
-router.get("/equipments", verifyJWT, equipmentController.getAllEquipment);
-router.get("/equipment/:idEquipment", verifyJWT, equipmentController.getEquipmentById);
-router.get("/equipments/search", verifyJWT, equipmentController.searchEquipmentByName);
-router.put("/equipment/:idEquipment", verifyJWT, equipmentController.updateEquipment);
-router.delete("/equipment/:idEquipment", verifyJWT, equipmentController.deleteEquipment);
-
-router.post("/product", verifyJWT, productController.createProduct);
-router.get("/products", verifyJWT, productController.getAllProducts);
-router.get("/product/:idProduct", verifyJWT, productController.getProductById);
-router.get("/products/search", verifyJWT, productController.searchProductByName);
-router.put("/product/:idProduct", verifyJWT, productController.updateProduct);
-router.delete("/product/:idProduct", verifyJWT, productController.deleteProduct);
-
-router.post("/diverses", verifyJWT, diversesController.createDiverses);
-router.get("/diverses", verifyJWT, diversesController.getAllDiverses);
-router.get("/diverse/:idDiverses", verifyJWT, diversesController.getDiversesById);
-router.get("/diverses/search", verifyJWT, diversesController.searchDiversesByName);
-router.put("/diverse/:idDiverses", verifyJWT, diversesController.updateDiverses);
-router.delete("/diverse/:idDiverses", verifyJWT, diversesController.deleteDiverses);
-
-router.post("/transaction", verifyJWT, authorizeManager, transactionController.createTransactionFromRequest);
-router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
-router.get("/transaction/:idTransaction", authorizeManager, verifyJWT, transactionController.getTransactionById);
-router.put("/transaction/:idTransaction", verifyJWT, authorizeManager, transactionController.updateTransaction);
-router.delete("/transaction/:idTransaction", verifyJWT, authorizeManager, transactionController.deleteTransaction);
+router.post("/location", verifyJWT, authorizeManager, locationController.createLocation);
+router.put("/location/:idLocation", verifyJWT, authorizeManager, locationController.updateLocation);
+router.delete("/location/:idLocation", verifyJWT, authorizeManager, locationController.deleteLocation);
 
 router.get("/report/general", verifyJWT, authorizeManager, reportController.generateGeneralReport);
 router.get("/report/low-stock", verifyJWT, authorizeManager, reportController.generateLowStockReport);
 router.get("/report/transactions", verifyJWT, authorizeManager, reportController.generateTransactionsReport);
 router.get("/report/by-location", verifyJWT, authorizeManager, reportController.generateByLocationReport);
 router.get("/report/users", verifyJWT, authorizeManager, reportController.generateUsersReport);
-
-router.put("/ajust", verifyJWT, authorizeManager, async (req, res) => {
-    try {
-        const { fkIdUser, itemType, itemId, newQuantity } = req.body;
-            await transactionController.ajust(fkIdUser, itemType, itemId, newQuantity);
-        res.status(200).json({ message: "Ajuste realizado com sucesso." });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 module.exports = router;
