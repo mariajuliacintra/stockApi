@@ -7,7 +7,7 @@ services:
     command: ["./wait-for-it.sh", "db:3306", "--", "npm", "start"]
     # Mapeia a porta 5000 do container para porta 5000 da maquina
     ports:
-      - "5001:5000"
+      - "5000:5000"
     # Monta a maquina host no diretorio /usr/app dentro do container
     volumes:
       - .:/usr/app
@@ -20,7 +20,7 @@ services:
     # Configura o container para reiniciar automaticamente caso ele pare
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: senai@604
       MYSQL_DATABASE: stock
     # Mapeia a porta 3306 do container para porta 3306 da maquina
     ports:
