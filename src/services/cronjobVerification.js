@@ -2,70 +2,39 @@ const cron = require('node-cron');
 const { queryAsync } = require('../utils/functions'); 
 const { sendWarningEmail } = require('./mail/mailSender');
 
+// Função para verificar as datas de validade de todos os itens em uma única tabela
 async function checkExpirationDates() {
     try {
-        const queryExpiredMaterial = 'SELECT idMaterial, name, batchNumber, expirationDate FROM material WHERE expirationDate < CURDATE()';
-        const querySoonToExpireMaterial = 'SELECT idMaterial, name, batchNumber, expirationDate FROM material WHERE expirationDate BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
+        // Query unificada para encontrar todos os itens expirados e próximos de vencer
+        const queryAllItems = 'SELECT idItem, name, batchCode, expirationDate, category FROM item WHERE expirationDate IS NOT NULL AND (expirationDate < CURDATE() OR expirationDate BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY))';
+        
+        const allItems = await queryAsync(queryAllItems);
 
-        const expiredMaterials = await queryAsync(queryExpiredMaterial);
-        const soonToExpireMaterials = await queryAsync(querySoonToExpireMaterial);
+        // Mapeia os resultados para adicionar o status de "Expirado" ou "Próximo de Vencer"
+        const itemsWithStatus = allItems.map(item => {
+            const status = item.expirationDate < new Date().toISOString().slice(0, 10) ? 'Expirado' : 'Próximo de Vencer';
+            return {
+                ...item,
+                status,
+                // O tipo do item já está na coluna 'category', então basta usá-la
+                itemType: item.category
+            };
+        });
 
-        const queryExpiredProduct = 'SELECT idProduct, name, batchNumber, expirationDate FROM product WHERE expirationDate < CURDATE()';
-        const querySoonToExpireProduct = 'SELECT idProduct, name, batchNumber, expirationDate FROM product WHERE expirationDate BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
-
-        const expiredProducts = await queryAsync(queryExpiredProduct);
-        const soonToExpireProducts = await queryAsync(querySoonToExpireProduct);
-
-        const queryExpiredDiverses = 'SELECT idDiverses, name, batchNumber, expirationDate FROM diverses WHERE expirationDate < CURDATE()';
-        const querySoonToExpireDiverses = 'SELECT idDiverses, name, batchNumber, expirationDate FROM diverses WHERE expirationDate BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
-
-        const expiredDiverses = await queryAsync(queryExpiredDiverses);
-        const soonToExpireDiverses = await queryAsync(querySoonToExpireDiverses);
-
-        const allItems = [];
-        if (expiredMaterials.length > 0) {
-            expiredMaterials.forEach(item => {
-                allItems.push({ ...item, itemType: 'Material', status: 'Expirado' });
-            });
-        }
-        if (soonToExpireMaterials.length > 0) {
-            soonToExpireMaterials.forEach(item => {
-                allItems.push({ ...item, itemType: 'Material', status: 'Próximo de Vencer' });
-            });
-        }
-        if (expiredProducts.length > 0) {
-            expiredProducts.forEach(item => {
-                allItems.push({ ...item, itemType: 'Produto', status: 'Expirado' });
-            });
-        }
-        if (soonToExpireProducts.length > 0) {
-            soonToExpireProducts.forEach(item => {
-                allItems.push({ ...item, itemType: 'Produto', status: 'Próximo de Vencer' });
-            });
-        }
-        if (expiredDiverses.length > 0) {
-            expiredDiverses.forEach(item => {
-                allItems.push({ ...item, itemType: 'Diversos', status: 'Expirado' });
-            });
-        }
-        if (soonToExpireDiverses.length > 0) {
-            soonToExpireDiverses.forEach(item => {
-                allItems.push({ ...item, itemType: 'Diversos', status: 'Próximo de Vencer' });
-            });
-        }
-
-        if (allItems.length > 0) {
+        // Se houver itens expirados ou próximos de vencer, envia o e-mail de alerta
+        if (itemsWithStatus.length > 0) {
             const users = await queryAsync('SELECT email FROM user WHERE role = "manager"');
             const managerEmails = users.map(user => user.email);
             if (managerEmails.length > 0) {
-                await sendWarningEmail(managerEmails, allItems);
+                await sendWarningEmail(managerEmails, itemsWithStatus);
             }
         }
-
     } catch (error) {
+        console.error('Erro ao verificar datas de validade:', error);
     }
 }
 
+// Agendamento para rodar a função todos os dias à meia-noite
 cron.schedule('0 0 * * *', () => {
     checkExpirationDates();
 });

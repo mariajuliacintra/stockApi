@@ -1,16 +1,14 @@
-# CSSTORAGE - API de Gerenciamento de Estoque
+# Estoque SENAI - API de Gerenciamento de Estoque
 
-CSSTORAGE é uma API desenvolvida para gerenciar o estoque da oficina mecânica da instituição.  
+Estoque SENAI é uma API desenvolvida para gerenciar o estoque da oficina mecânica da instituição.  
 O sistema abrange materiais, ferramentas, equipamentos, matérias-primas e diversos itens do estoque, permitindo um controle organizado e centralizado para estudantes e administradores.
 
-## 📖 Sobre
+## Descrição
 
 Este projeto foi desenvolvido como parte de atividades acadêmicas no curso de Desenvolvimento de Sistemas.  
 A API fornece funcionalidades para registro, controle, movimentação e relatórios detalhados do estoque da oficina.
 
----
-
-## ⚙️ Tecnologias
+## Tecnologias Utilizadas
 
 A API foi construída utilizando:
 
@@ -25,86 +23,87 @@ A API foi construída utilizando:
 - **NodeCron** para agendamento de tarefas  
 - **Axios**, **CORS**, **dotenv-safe**
 
----
 
-## 💻 Instalação
+### Passos para Instalação
 
-### Clonar o repositório
+1. **Clonar o Repositório**
+
+   ```bash
+   git clone https://github.com/mariajuliacintra/stockApi.git
+
+   ```
+
+2. **Entre na Pasta**
+
+   ```bash
+   cd stockApi
+   ```
+
+3. **Executar o projeto via Docker**
+
+- Com o Docker Desktop aberto
+- Criar o .env (use o .env.example como exemplo)
+- abra o terminal e execute a seguinte linha de código
+
 ```bash
-git clone https://github.com/mariajuliacintra/stockApi.git
+    docker-compose up --build
 ```
 
-dentro do projeto -->
+4. **Instalar as Dependências**
 
-⚙️ Configuração
-Crie um arquivo .env na raiz do projeto com as variáveis de ambiente.
-Configure o .env, com base no .env.example
+- Se estiver usando npm, execute:
 
+  ```bash
+    npm i
+  ```
 
-Configurações de Envio de E-mail (Nodemailer + Gmail)
-Este projeto utiliza uma API do Google para envio de e-mails.
+  4.1. **Iniciar o Servidor de Desenvolvimento**
 
-⚠️ Não use sua senha principal do Gmail.
+- Com npm, execute:
+  ```bash
+    npm start
+  ```
 
-É necessário configurar uma Senha de Aplicativo (App Password).
+## Configuração da Conexão com MySQL
 
-Passos:
+O projeto utiliza o pacote `mysql2` para gerenciar a conexão com o banco de dados MySQL. Para configurar a conexão, crie o arquivo `.env` e o preencha com essas informações:
 
--Ative a Verificação em Duas Etapas na sua conta Google: Configurações de Segurança
--Vá até Senhas de App
+```javascript
+SECRET = "{Segredo usado para criar TokenJWT}";
+DB_HOST = "{Seu IP / localhost}";
+DB_USER = "{Seu usuário SQL}";
+DB_PASSWORD = "{Senha do seu usuário SQL}";
+DB_NAME = "stock";
+```
 
--App: Correio
+## Configuração da Conexão com `nodemailer`
 
--Dispositivo: escolha Outro (ex: “API Projeto”)
+O projeto utiliza o pacote `nodemiler` para envio de e-mails, no arquivo `.env` e o preencha com essas informações:
 
--Gere a senha de 16 dígitos.
+- É necessário configurar uma Senha de Aplicativo (App Password).
 
--Copie essa senha e adicione no .env (gmail_pass):
+- Ative a Verificação em Duas Etapas na sua conta Google: Configurações de Segurança
 
+- Vá até [Senhas de App](https://myaccount.google.com/apppasswords)
 
+- Copie essa senha e adicione no .env (GMAIL_PASS)
+
+```
 GMAIL_USER=seu.email@gmail.com
 GMAIL_PASS=sua_senha_de_16_digitos_gerada_aqui
-```bash
--- Para rodar a API localmente:
-npm install
-npm start
-
--- Usando Docker
-docker compose build
-docker compose up
 ```
 
-A API estará disponível no endereço configurado
-http://localhost:5000/stock
 
-👉 Documentação Completa - Endpoints
+## Documentação Completa dos Endpoints
 
-https://www.notion.so/endpoints-24c9ea6603bd81a19209f3446f846808
+Os exemplos de requisição cURL foram movidos para um arquivo separado. Acesse-os [aqui](https://github.com/mariajuliacintra/stockApi/tree/main/src/documentation).
 
-🔒 Autenticação
+- Documentação Completa - [Notion](https://www.notion.so/endpoints-24c9ea6603bd81a19209f3446f846808)
 
-A autenticação da API é feita via JWT.
+## Autores
 
-Fluxo:
-Faça login via endpoint de usuário (via documentação).
+- [@fogazza](https://github.com/Fogazzaa)
 
-O retorno será um JSON com a mensagem de sucesso + token JWT (POSTMAN).
+- [@guelin](https://github.com/m1guelzin)
 
-Para acessar as demais rotas protegidas, inclua o token no header da requisição:
-
-
-📬 Contato
-
-Vinicius Fogaça 
-(https://github.com/Fogazzaa)
-
-Miguel Garrido Souza
-(https://github.com/m1guelzin)
-
-Yasmin Souza
-(https://github.com/souzayasmin)
-
-
-
-
-
+- [@yasmin](https://github.com/souzayasmin)
