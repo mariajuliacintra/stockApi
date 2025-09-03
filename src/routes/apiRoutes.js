@@ -1,6 +1,7 @@
 const router = require("express").Router();
 
-const reportController = require("../controllers/reportController");
+const ReportControllerExcel = require("../controllers/reportControllerExcel");
+const reportControllerPdf = require("../controllers/reportControllerPdf");
 const userController = require("../controllers/userController");
 const itemController = require("../controllers/itemController");
 const locationController = require("../controllers/locationController");
@@ -33,10 +34,12 @@ router.post("/location", verifyJWT, authorizeManager, locationController.createL
 router.put("/location/:idLocation", verifyJWT, authorizeManager, locationController.updateLocation);
 router.delete("/location/:idLocation", verifyJWT, authorizeManager, locationController.deleteLocation);
 
-router.get("/report/general", verifyJWT, authorizeManager, reportController.generateGeneralReport);
-router.get("/report/low-stock", verifyJWT, authorizeManager, reportController.generateLowStockReport);
-router.get("/report/transactions", verifyJWT, authorizeManager, reportController.generateTransactionsReport);
-router.get("/report/by-location", verifyJWT, authorizeManager, reportController.generateByLocationReport);
-router.get("/report/users", verifyJWT, authorizeManager, reportController.generateUsersReport);
+router.get("/report/pdf/general",verifyJWT, authorizeManager, reportControllerPdf.generateGeneralReport);
+router.get("/report/pdf/low-stock", verifyJWT, authorizeManager, reportControllerPdf.generateLowStockReport);
+router.get("/report/pdf/transactions", verifyJWT, authorizeManager,reportControllerPdf.generateTransactionsReport);
+
+router.get("/report/excel/general", ReportControllerExcel.generateGeneralReportExcel);
+router.get("/report/excel/low-stock",ReportControllerExcel.generateLowStockReportExcel);
+router.get("/report/excel/transactions", ReportControllerExcel.generateTransactionsReportExcel);
 
 module.exports = router;
