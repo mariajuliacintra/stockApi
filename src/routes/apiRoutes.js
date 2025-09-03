@@ -22,8 +22,9 @@ router.post("/user/validate-recovery-code", userController.validateRecoveryCode)
 router.post("/user/recovery-password", userController.recoveryPassword);
 
 router.get("/items/", verifyJWT, itemController.getAllItems);
-router.get("/items/details", verifyJWT, itemController.getAllItemsDetail);
+router.get("/items/details", verifyJWT, itemController.getAllItemsDetails);
 router.get("/item/:category", verifyJWT, itemController.getItemsByCategory);
+router.get("/item/:category/details", verifyJWT, itemController.getItemsByCategoryDetails);
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
 router.put("/item/:idItem", verifyJWT, authorizeManager, itemController.updateItem);
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);

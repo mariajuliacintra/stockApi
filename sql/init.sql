@@ -78,9 +78,9 @@ INSERT INTO user (name, email, hashedPassword, role) VALUES
 INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, lastMaintenance, batchCode, lotNumber, category, fkIdLocation) VALUES
 ('Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 15, NULL, '2025-01-10', 'MRT-202501-001', 1, 'tool', 1),
 ('Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '19mm x 20m', 25.0, '2026-10-01', NULL, 'FSL-202610-009', 1, 'material', 2),
-('Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 50.0, '2027-02-15', NULL, 'TDT-202702-014', 1, 'material', 3),
+('Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 50.0, '2027-02-15', NULL, 'TDT-202702-014', 1, 'product', 3),
 ('Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '1.5V', 40.0, '2028-01-01', NULL, 'P-AA-202801-001', 1, 'diverses', 7),
-('Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '1L', 7.0, '2026-12-31', NULL, 'OC-202612-005', 1, 'diverses', 11);
+('Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '1L', 7.0, '2026-12-31', NULL, 'OC-202612-005', 1, 'rawMaterial', 11);
 
 INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity) VALUES
 (1, 1, 'IN', 15, 0, 15),
