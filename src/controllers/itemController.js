@@ -38,7 +38,7 @@ module.exports = class ItemController {
         }
     }
 
-    static async getAllItemsDetail(req, res) {
+    static async getAllItemsDetails(req, res) {
         try {
             const query = "SELECT * FROM item";
             const items = await queryAsync(query);
@@ -90,12 +90,81 @@ module.exports = class ItemController {
         try {
             const query = "SELECT * FROM item WHERE category = ?";
             const items = await queryAsync(query, [category]);
+            
             if (items.length === 0) {
                 return res.status(404).json({ message: "Nenhum item encontrado para esta categoria." });
             }
-            res.status(200).json(items);
+
+            const groupedItemsMap = new Map();
+            items.forEach(item => {
+                const { batchCode, quantity } = item;
+                if (!groupedItemsMap.has(batchCode)) {
+                    groupedItemsMap.set(batchCode, {
+                        batchCode: item.batchCode,
+                        name: item.name,
+                        aliases: item.aliases,
+                        brand: item.brand,
+                        description: item.description,
+                        technicalSpecs: item.technicalSpecs,
+                        category: item.category,
+                        totalQuantity: parseFloat(quantity),
+                    });
+                } else {
+                    const group = groupedItemsMap.get(batchCode);
+                    group.totalQuantity += parseFloat(quantity);
+                }
+            });
+            const groupedItemsArray = Array.from(groupedItemsMap.values());
+            res.status(200).json(groupedItemsArray);
         } catch (error) {
-            console.error("Erro ao buscar itens por categoria:", error);
+            console.error("Erro ao buscar e agrupar itens por categoria:", error);
+            res.status(500).json({ error: "Erro interno do servidor" });
+        }
+    }
+
+    static async getItemsByCategoryDetails(req, res) {
+        const { category } = req.params;
+        try {
+            const query = "SELECT * FROM item WHERE category = ?";
+            const items = await queryAsync(query, [category]);
+
+            if (items.length === 0) {
+                return res.status(404).json({ message: "Nenhum item encontrado para esta categoria." });
+            }
+
+            const groupedItemsMap = new Map();
+            items.forEach(item => {
+                const { batchCode, quantity, ...details } = item;
+                if (!groupedItemsMap.has(batchCode)) {
+                    groupedItemsMap.set(batchCode, {
+                        batchCode: batchCode,
+                        name: item.name,
+                        aliases: item.aliases,
+                        brand: item.brand,
+                        description: item.description,
+                        technicalSpecs: item.technicalSpecs,
+                        category: item.category,
+                        totalQuantity: 0,
+                        lots: []
+                    });
+                }
+
+                const group = groupedItemsMap.get(batchCode);
+                group.totalQuantity += parseFloat(quantity);
+                group.lots.push({
+                    idItem: details.idItem,
+                    lotNumber: details.lotNumber,
+                    quantity: parseFloat(quantity),
+                    expirationDate: details.expirationDate,
+                    lastMaintenance: details.lastMaintenance,
+                    fkIdLocation: details.fkIdLocation,
+                });
+            });
+
+            const groupedItemsArray = Array.from(groupedItemsMap.values());
+            res.status(200).json(groupedItemsArray);
+        } catch (error) {
+            console.error("Erro ao buscar e agrupar itens por categoria com detalhes:", error);
             res.status(500).json({ error: "Erro interno do servidor" });
         }
     }
