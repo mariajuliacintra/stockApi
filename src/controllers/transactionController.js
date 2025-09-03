@@ -1,5 +1,4 @@
-const { queryAsync, createToken, validateToken } = require('../utils/functions');
-const jwt = require("jsonwebtoken");
+const { queryAsync } = require('../utils/functions');
 
 module.exports = class TransactionController {
     static async getAllTransactions (req, res) {
