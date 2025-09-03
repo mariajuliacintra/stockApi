@@ -20,10 +20,10 @@ router.post("/user/verify-recovery-password", userController.verifyRecoveryPassw
 router.post("/user/validate-recovery-code", userController.validateRecoveryCode);
 router.post("/user/recovery-password", userController.recoveryPassword);
 
-router.get("/item", verifyJWT, itemController.getAllItems);
+router.get("/items/", verifyJWT, itemController.getAllItems);
+router.get("/items/details", verifyJWT, itemController.getAllItemsDetail);
 router.get("/item/:category", verifyJWT, itemController.getItemsByCategory);
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
-router.post("/item/withdraw", verifyJWT, authorizeManager, itemController.withdrawItem);
 router.put("/item/:idItem", verifyJWT, authorizeManager, itemController.updateItem);
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
 

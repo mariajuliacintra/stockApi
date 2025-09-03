@@ -6,9 +6,81 @@ module.exports = class ItemController {
         try {
             const query = "SELECT * FROM item";
             const items = await queryAsync(query);
-            res.status(200).json(items);
+            
+            const groupedItemsMap = new Map();
+
+            items.forEach(item => {
+                const { batchCode, quantity } = item;
+
+                if (!groupedItemsMap.has(batchCode)) {
+                    groupedItemsMap.set(batchCode, {
+                        batchCode: item.batchCode,
+                        name: item.name,
+                        aliases: item.aliases,
+                        brand: item.brand,
+                        description: item.description,
+                        technicalSpecs: item.technicalSpecs,
+                        category: item.category,
+                        totalQuantity: parseFloat(quantity),
+                    });
+                } else {
+                    const group = groupedItemsMap.get(batchCode);
+                    group.totalQuantity += parseFloat(quantity);
+                }
+            });
+
+            const groupedItemsArray = Array.from(groupedItemsMap.values());
+            
+            res.status(200).json(groupedItemsArray);
         } catch (error) {
-            console.error("Erro ao buscar itens:", error);
+            console.error("Erro ao buscar e agrupar itens:", error);
+            res.status(500).json({ error: "Erro interno do servidor" });
+        }
+    }
+
+    static async getAllItemsDetail(req, res) {
+        try {
+            const query = "SELECT * FROM item";
+            const items = await queryAsync(query);
+            
+            const groupedItemsMap = new Map();
+
+            items.forEach(item => {
+                const { batchCode, quantity, ...details } = item;
+
+                if (!groupedItemsMap.has(batchCode)) {
+                    groupedItemsMap.set(batchCode, {
+                        batchCode: batchCode,
+                        name: item.name,
+                        aliases: item.aliases,
+                        brand: item.brand,
+                        description: item.description,
+                        technicalSpecs: item.technicalSpecs,
+                        category: item.category,
+                        totalQuantity: 0,
+                        lots: []
+                    });
+                }
+
+                const group = groupedItemsMap.get(batchCode);
+                
+                group.totalQuantity += parseFloat(quantity);
+
+                group.lots.push({
+                    idItem: details.idItem,
+                    lotNumber: details.lotNumber,
+                    quantity: parseFloat(quantity),
+                    expirationDate: details.expirationDate,
+                    lastMaintenance: details.lastMaintenance,
+                    fkIdLocation: details.fkIdLocation,
+                });
+            });
+
+            const groupedItemsArray = Array.from(groupedItemsMap.values());
+            
+            res.status(200).json(groupedItemsArray);
+        } catch (error) {
+            console.error("Erro ao buscar e agrupar itens:", error);
             res.status(500).json({ error: "Erro interno do servidor" });
         }
     }
@@ -68,7 +140,7 @@ module.exports = class ItemController {
             }
 
             let lotNumber = 1;
-            if (expirationDate) {
+            if (batchCode) {
                 const getLotQuery = "SELECT MAX(lotNumber) AS lastLot FROM item WHERE batchCode = ?";
                 const lotResult = await queryAsync(getLotQuery, [batchCode]);
                 if (lotResult.length > 0 && lotResult[0].lastLot !== null) {
@@ -159,67 +231,6 @@ module.exports = class ItemController {
         } catch (error) {
             await queryAsync("ROLLBACK");
             console.error("Erro ao atualizar item:", error);
-            res.status(500).json({ error: "Erro interno do servidor", details: error.message });
-        }
-    }
-
-    static async withdrawItem(req, res) {
-        const { name, brand, quantityToWithdraw, fkIdUser } = req.body;
-
-        if (!fkIdUser || !quantityToWithdraw || quantityToWithdraw <= 0) {
-            return res.status(400).json({ message: "ID do usuário e a quantidade a ser retirada são obrigatórios e devem ser positivos." });
-        }
-
-        try {
-            await queryAsync("START TRANSACTION");
-
-            const getLotsQuery = "SELECT idItem, quantity FROM item WHERE name = ? AND brand = ? AND quantity > 0 ORDER BY expirationDate ASC, lotNumber ASC";
-            const availableLots = await queryAsync(getLotsQuery, [name, brand]);
-
-            if (availableLots.length === 0) {
-                await queryAsync("ROLLBACK");
-                return res.status(404).json({ message: "Nenhum lote disponível para este item." });
-            }
-
-            let remainingToWithdraw = parseFloat(quantityToWithdraw);
-            const processedLots = [];
-
-            for (const lot of availableLots) {
-                if (remainingToWithdraw <= 0) break;
-
-                const currentLotQuantity = parseFloat(lot.quantity);
-                const withdrawnFromLot = Math.min(remainingToWithdraw, currentLotQuantity);
-                const newLotQuantity = currentLotQuantity - withdrawnFromLot;
-
-                const updateLotQuery = "UPDATE item SET quantity = ? WHERE idItem = ?";
-                await queryAsync(updateLotQuery, [newLotQuantity, lot.idItem]);
-
-                processedLots.push({
-                    fkIdItem: lot.idItem,
-                    quantityChange: withdrawnFromLot,
-                    oldQuantity: currentLotQuantity,
-                    newQuantity: newLotQuantity
-                });
-
-                remainingToWithdraw -= withdrawnFromLot;
-            }
-
-            if (remainingToWithdraw > 0) {
-                await queryAsync("ROLLBACK");
-                return res.status(400).json({ message: `Quantidade insuficiente em estoque. Faltam ${remainingToWithdraw} unidades.` });
-            }
-
-            const insertTransactionQuery = "INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity, transactionDate) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
-            for (const lot of processedLots) {
-                await queryAsync(insertTransactionQuery, [fkIdUser, lot.fkIdItem, 'OUT', lot.quantityChange, lot.oldQuantity, lot.newQuantity]);
-            }
-
-            await queryAsync("COMMIT");
-
-            res.status(200).json({ message: "Itens retirados com sucesso!", withdrawnLots: processedLots.length, totalWithdrawn: quantityToWithdraw });
-        } catch (error) {
-            await queryAsync("ROLLBACK");
-            console.error("Erro ao retirar item:", error);
             res.status(500).json({ error: "Erro interno do servidor", details: error.message });
         }
     }
