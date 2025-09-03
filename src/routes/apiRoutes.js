@@ -4,6 +4,7 @@ const reportController = require("../controllers/reportController");
 const userController = require("../controllers/userController");
 const itemController = require("../controllers/itemController");
 const locationController = require("../controllers/locationController");
+const transactionController = require("../controllers/transactionController");
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
@@ -15,7 +16,6 @@ router.put("/user/:idUser", verifyJWT, userController.updateUser);
 router.post("/user/verify-update", userController.verifyUpdate);
 router.delete("/user/:idUser", verifyJWT, userController.deleteUser);
 router.get("/users", verifyJWT, authorizeManager, userController.getAllUsers);
-
 router.post("/user/verify-recovery-password", userController.verifyRecoveryPassword);
 router.post("/user/validate-recovery-code", userController.validateRecoveryCode);
 router.post("/user/recovery-password", userController.recoveryPassword);
@@ -38,5 +38,11 @@ router.get("/report/low-stock", verifyJWT, authorizeManager, reportController.ge
 router.get("/report/transactions", verifyJWT, authorizeManager, reportController.generateTransactionsReport);
 router.get("/report/by-location", verifyJWT, authorizeManager, reportController.generateByLocationReport);
 router.get("/report/users", verifyJWT, authorizeManager, reportController.generateUsersReport);
+
+router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
+router.get("/transactions/:idTransaction", verifyJWT, authorizeManager, transactionController.getTransactionById);
+router.post("/transactions", verifyJWT, authorizeManager, transactionController.addTransaction);
+router.get("/transactions/item/:fkIdItem", verifyJWT, authorizeManager, transactionController.getTransactionByItem);
+router.get("/transactions/user/:fkIdUser", verifyJWT, transactionController.getTransactionByUser);
 
 module.exports = router;
