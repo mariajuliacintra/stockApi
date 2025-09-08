@@ -26,7 +26,10 @@ router.get("/items/details", verifyJWT, itemController.getAllItemsDetails);
 router.get("/item/:category", verifyJWT, itemController.getItemsByCategory);
 router.get("/item/:category/details", verifyJWT, itemController.getItemsByCategoryDetails);
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
-router.put("/item/:idItem", verifyJWT, authorizeManager, itemController.updateItem);
+router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemController.updateItemInformation);
+router.put("/item/information/batch/:batchCode", verifyJWT, authorizeManager, itemController.updateItemInformation);
+router.put("/item/quantity/:idItem", verifyJWT, authorizeManager, itemController.updateItemQuantity);
+router.put("/item/quantity/batch/:batchCode", verifyJWT, authorizeManager, itemController.updateItemQuantity);
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
 
 router.get("/location", verifyJWT, locationController.getLocations);
