@@ -71,8 +71,8 @@ module.exports = class ItemController {
                     lotNumber: details.lotNumber,
                     quantity: parseFloat(quantity),
                     expirationDate: details.expirationDate,
-                    lastMaintenance: details.lastMaintenance,
                     fkIdLocation: details.fkIdLocation,
+                    image: details.image
                 });
             });
 
@@ -156,8 +156,8 @@ module.exports = class ItemController {
                     lotNumber: details.lotNumber,
                     quantity: parseFloat(quantity),
                     expirationDate: details.expirationDate,
-                    lastMaintenance: details.lastMaintenance,
                     fkIdLocation: details.fkIdLocation,
+                    image: details.image 
                 });
             });
 
@@ -170,7 +170,7 @@ module.exports = class ItemController {
     }
 
     static async createItem(req, res) {
-        const { name, aliases, brand, description, technicalSpecs, quantity, expirationDate, lastMaintenance, batchCode, category, fkIdLocation, fkIdUser } = req.body;
+        const { name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, category, fkIdLocation, fkIdUser, image } = req.body;
 
         if (!fkIdUser) {
             return res.status(400).json({ message: "ID do usuário (fkIdUser) é obrigatório." });
@@ -218,8 +218,8 @@ module.exports = class ItemController {
             }
             finalLotNumber = lotNumber;
 
-            const insertItemQuery = "INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, lastMaintenance, batchCode, lotNumber, category, fkIdLocation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            const itemValues = [name, aliases, brand, description, technicalSpecs, quantity, expirationDate, lastMaintenance, batchCode, finalLotNumber, category, fkIdLocation];
+            const insertItemQuery = "INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, lotNumber, category, fkIdLocation, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            const itemValues = [name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, finalLotNumber, category, fkIdLocation, image];
             const itemResult = await queryAsync(insertItemQuery, itemValues);
             newItemId = itemResult.insertId;
 
