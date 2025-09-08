@@ -32,9 +32,9 @@ CREATE TABLE item (
     technicalSpecs TEXT,
     quantity DECIMAL(10, 2) NOT NULL DEFAULT 0.0,
     expirationDate DATE DEFAULT NULL,
-    lastMaintenance DATE DEFAULT NULL,
     batchCode VARCHAR(255) NOT NULL,
     lotNumber INT NOT NULL,
+    image LONGBLOB DEFAULT NULL,
     UNIQUE(batchCode, lotNumber),
     category ENUM('tool', 'material', 'rawMaterial', 'equipment', 'product', 'diverses') NOT NULL,
     fkIdLocation INT,
@@ -44,7 +44,7 @@ CREATE TABLE item (
 CREATE TABLE transactions (
     idTransaction INT PRIMARY KEY AUTO_INCREMENT,
     fkIdUser INT NOT NULL,
-    fkIdItem INT NOT NULL,
+    fkIdItem INT NOT NULL, 	
     actionDescription ENUM('IN', 'OUT', 'AJUST') NOT NULL,
     quantityChange DECIMAL(10, 2) NOT NULL,
     oldQuantity DECIMAL(10, 2),
@@ -75,12 +75,12 @@ INSERT INTO user (name, email, hashedPassword, role) VALUES
 ('Vinicius Fogaça', 'vfogacacintra@gmail.com', '$2a$12$Dgp7DDOLi91NJYR0abt.yuwSy7dDHDuS3wp/QRw02rs06HqDMr8WS', 'manager'),
 ('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
 
-INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, lastMaintenance, batchCode, lotNumber, category, fkIdLocation) VALUES
-('Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 15, NULL, '2025-01-10', 'MRT-202501-001', 1, 'tool', 1),
-('Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '19mm x 20m', 25.0, '2026-10-01', NULL, 'FSL-202610-009', 1, 'material', 2),
-('Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 50.0, '2027-02-15', NULL, 'TDT-202702-014', 1, 'product', 3),
-('Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '1.5V', 40.0, '2028-01-01', NULL, 'P-AA-202801-001', 1, 'diverses', 7),
-('Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '1L', 7.0, '2026-12-31', NULL, 'OC-202612-005', 1, 'rawMaterial', 11);
+INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, lotNumber, category, fkIdLocation, image) VALUES
+('Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 15, NULL, 'MRT-202501-001', 1, 'tool', 1, NULL),
+('Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '19mm x 20m', 25.0, '2026-10-01', 'FSL-202610-009', 1, 'material', 2, NULL),
+('Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 50.0, '2027-02-15', 'TDT-202702-014', 1, 'product', 3, NULL),
+('Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '1.5V', 40.0, '2028-01-01', 'P-AA-202801-001', 1, 'diverses', 7, NULL),
+('Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '1L', 7.0, '2026-12-31', 'OC-202612-005', 1, 'rawMaterial', 11, NULL);
 
 INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity) VALUES
 (1, 1, 'IN', 15, 0, 15),

@@ -32,7 +32,7 @@ const validateCreateItem = async (data) => {
 
 const validateUpdateInformation = async (data) => {
     const { category, fkIdLocation } = data;
-    const updateFields = ['name', 'aliases', 'brand', 'description', 'technicalSpecs', 'expirationDate', 'lastMaintenance', 'category', 'fkIdLocation'];
+    const updateFields = ['name', 'aliases', 'brand', 'description', 'technicalSpecs', 'expirationDate', 'category', 'fkIdLocation', 'image'];
     const hasUpdateField = updateFields.some(field => data[field] !== undefined);
 
     if (!hasUpdateField) {
