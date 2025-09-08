@@ -1,5 +1,5 @@
 const { queryAsync } = require('../utils/functions');
-const { validateCreateItem, validateUpdateItem } = require('../services/validateItem');
+const { validateCreateItem, validateUpdateInformation, validateUpdateQuantity } = require('../services/validateItem');
 
 module.exports = class ItemController {
     static async getAllItems(req, res) {
@@ -236,31 +236,106 @@ module.exports = class ItemController {
             res.status(500).json({ error: "Erro interno do servidor", details: error.message });
         }
     }
+    
+    static async updateItemInformation(req, res) {
+        const { idItem, batchCode } = req.params;
+        const data = req.body;
 
-    static async updateItem(req, res) {
-        const { idItem } = req.params;
-        const { name, aliases, brand, description, technicalSpecs, quantity, expirationDate, lastMaintenance, batchCode, lotNumber, category, fkIdLocation, fkIdUser, isAjust } = req.body;
-
-        if (!fkIdUser) {
-            return res.status(400).json({ message: "ID do usuário (fkIdUser) é obrigatório." });
+        if (!idItem && !batchCode) {
+            return res.status(400).json({ message: "É necessário fornecer idItem ou batchCode para atualizar o item." });
         }
 
         try {
-            const validation = await validateUpdateItem(req.body, idItem);
+            const validation = await validateUpdateInformation(data);
             if (!validation.isValid) {
                 return res.status(400).json({ message: validation.message });
             }
 
             await queryAsync("START TRANSACTION");
 
-            const oldItemQuery = "SELECT quantity FROM item WHERE idItem = ?";
-            const oldItemResult = await queryAsync(oldItemQuery, [idItem]);
+            const fieldsToUpdate = Object.keys(data);
+            if (fieldsToUpdate.length === 0) {
+                await queryAsync("ROLLBACK");
+                return res.status(400).json({ message: "Nenhum campo para atualização foi fornecido." });
+            }
 
-            if (oldItemResult.length === 0) {
+            let updateQuery = "UPDATE item SET ";
+            let updateValues = [];
+
+            fieldsToUpdate.forEach(key => {
+                updateQuery += `${key} = ?, `;
+                updateValues.push(data[key]);
+            });
+
+            updateQuery = updateQuery.slice(0, -2);
+
+            let whereClause = "";
+            let whereValue;
+            if (idItem) {
+                whereClause = " WHERE idItem = ?";
+                whereValue = idItem;
+            } else {
+                whereClause = " WHERE batchCode = ?";
+                whereValue = batchCode;
+            }
+
+            updateQuery += whereClause;
+            updateValues.push(whereValue);
+
+            const updateResult = await queryAsync(updateQuery, updateValues);
+
+            if (updateResult.affectedRows === 0) {
                 await queryAsync("ROLLBACK");
                 return res.status(404).json({ message: "Item não encontrado." });
             }
-            const oldQuantity = oldItemResult[0].quantity;
+
+            await queryAsync("COMMIT");
+            res.status(200).json({ message: "Informações do item atualizadas com sucesso!" });
+        } catch (error) {
+            await queryAsync("ROLLBACK");
+            console.error("Erro ao atualizar informações do item:", error);
+            res.status(500).json({ error: "Erro interno do servidor", details: error.message });
+        }
+    }
+
+    static async updateItemQuantity(req, res) {
+        const { idItem, batchCode } = req.params;
+        const { quantity, isAjust, fkIdUser } = req.body;
+
+        if (!idItem && !batchCode) {
+            return res.status(400).json({ message: "É necessário fornecer idItem ou batchCode para atualizar o item." });
+        }
+
+        try {
+            const validation = await validateUpdateQuantity(req.body);
+            if (!validation.isValid) {
+                return res.status(400).json({ message: validation.message });
+            }
+
+            await queryAsync("START TRANSACTION");
+
+            let getItemQuery = "SELECT idItem, quantity FROM item";
+            let whereClause = "";
+            let whereValue;
+            if (idItem) {
+                whereClause = " WHERE idItem = ?";
+                whereValue = idItem;
+            } else {
+                whereClause = " WHERE batchCode = ?";
+                whereValue = batchCode;
+            }
+
+            getItemQuery += whereClause;
+            const itemResult = await queryAsync(getItemQuery, [whereValue]);
+
+            if (itemResult.length === 0) {
+                await queryAsync("ROLLBACK");
+                return res.status(404).json({ message: "Item não encontrado." });
+            }
+
+            const itemToUpdate = itemResult[0];
+            const oldQuantity = parseFloat(itemToUpdate.quantity);
+            const itemIdToUpdate = itemToUpdate.idItem;
 
             let newQuantity;
             let quantityChange;
@@ -271,35 +346,34 @@ module.exports = class ItemController {
                 quantityChange = newQuantity - oldQuantity;
                 actionDescription = 'AJUST';
             } else {
-                newQuantity = parseFloat(oldQuantity) + parseFloat(quantity);
+                newQuantity = oldQuantity + parseFloat(quantity);
                 quantityChange = parseFloat(quantity);
                 actionDescription = quantityChange > 0 ? 'IN' : 'OUT';
             }
-            
+
             if (newQuantity < 0) {
                 await queryAsync("ROLLBACK");
                 return res.status(400).json({ message: "A quantidade final não pode ser negativa." });
             }
 
-            const updateItemQuery = "UPDATE item SET name = ?, aliases = ?, brand = ?, description = ?, technicalSpecs = ?, quantity = ?, expirationDate = ?, lastMaintenance = ?, batchCode = ?, lotNumber = ?, category = ?, fkIdLocation = ? WHERE idItem = ?";
-            const updateItemValues = [name, aliases, brand, description, technicalSpecs, newQuantity, expirationDate, lastMaintenance, batchCode, lotNumber, category, fkIdLocation, idItem];
-            const updateResult = await queryAsync(updateItemQuery, updateItemValues);
+            const updateItemQuery = "UPDATE item SET quantity = ? WHERE idItem = ?";
+            const updateResult = await queryAsync(updateItemQuery, [newQuantity, itemIdToUpdate]);
 
             if (updateResult.affectedRows === 0) {
                 await queryAsync("ROLLBACK");
-                return res.status(404).json({ message: "Item não encontrado." });
+                return res.status(404).json({ message: "Falha ao atualizar a quantidade do item." });
             }
 
             const insertTransactionQuery = "INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity, transactionDate) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
-            const transactionValues = [fkIdUser, idItem, actionDescription, Math.abs(quantityChange), oldQuantity, newQuantity];
+            const transactionValues = [fkIdUser, itemIdToUpdate, actionDescription, Math.abs(quantityChange), oldQuantity, newQuantity];
             await queryAsync(insertTransactionQuery, transactionValues);
 
             await queryAsync("COMMIT");
 
-            res.status(200).json({ message: "Item atualizado com sucesso!" });
+            res.status(200).json({ message: "Quantidade do item atualizada com sucesso!" });
         } catch (error) {
             await queryAsync("ROLLBACK");
-            console.error("Erro ao atualizar item:", error);
+            console.error("Erro ao atualizar a quantidade do item:", error);
             res.status(500).json({ error: "Erro interno do servidor", details: error.message });
         }
     }

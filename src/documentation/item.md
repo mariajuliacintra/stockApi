@@ -1,6 +1,5 @@
 # itemCURL's
 
-
 ## 1. POST: Criar um novo item ou adicionar quantidade a um lote existente
 
 - name: Nome do item
