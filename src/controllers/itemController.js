@@ -1,7 +1,7 @@
 const { queryAsync, handleResponse } = require('../utils/functions');
 const { validateCreateItem, validateUpdateInformation, validateUpdateQuantity } = require('../services/validateItem');
 
-class ItemController {
+module.exports = class ItemController {
     static async checkItemByBatchCode(req, res) {
         const { batchCode } = req.params;
         try {
@@ -189,6 +189,7 @@ class ItemController {
             let newItemId;
             let finalLotNumber;
 
+            // Verificação de lote existente com a mesma data de validade
             if (expirationDate) {
                 const existingLotQuery = "SELECT idItem, quantity, lotNumber FROM item WHERE name = ? AND brand = ? AND expirationDate = ? AND fkIdLocation = ?";
                 const existingLot = await queryAsync(existingLotQuery, [name, brand, expirationDate, fkIdLocation]);
@@ -210,6 +211,7 @@ class ItemController {
                 }
             }
 
+            // Lógica para determinar o próximo lotNumber
             let lotNumber = 1;
             if (batchCode) {
                 const getLotQuery = "SELECT MAX(lotNumber) AS lastLot FROM item WHERE batchCode = ?";
@@ -220,11 +222,13 @@ class ItemController {
             }
             finalLotNumber = lotNumber;
 
+            // Inserção de um novo item
             const insertItemQuery = "INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, lotNumber, category, fkIdLocation, fkIdImage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             const itemValues = [name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, finalLotNumber, category, fkIdLocation, fkIdImage];
             const itemResult = await queryAsync(insertItemQuery, itemValues);
             newItemId = itemResult.insertId;
 
+            // Inserção da transação
             const insertTransactionQuery = "INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity) VALUES (?, ?, ?, ?, ?, ?)";
             const transactionValues = [fkIdUser, newItemId, 'IN', quantity, 0, quantity];
             await queryAsync(insertTransactionQuery, transactionValues);
@@ -235,6 +239,65 @@ class ItemController {
         } catch (error) {
             await queryAsync("ROLLBACK");
             console.error("Erro ao criar item:", error);
+            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+        }
+    }
+
+    static async createLot(req, res) {
+        const { batchCode } = req.params;
+        const { quantity, expirationDate, fkIdLocation, fkIdUser } = req.body;
+
+        if (!fkIdUser) {
+            return handleResponse(res, 400, { message: "ID do usuário (fkIdUser) é obrigatório." });
+        }
+
+        try {
+            await queryAsync("START TRANSACTION");
+
+            // 1. Encontrar o item base pelo batchCode
+            const baseItemQuery = "SELECT name, aliases, brand, description, technicalSpecs, category, fkIdImage FROM item WHERE batchCode = ? LIMIT 1";
+            const [baseItem] = await queryAsync(baseItemQuery, [batchCode]);
+
+            if (!baseItem) {
+                await queryAsync("ROLLBACK");
+                return handleResponse(res, 404, { message: "BatchCode não encontrado. Não é possível criar um novo lote." });
+            }
+
+            // 2. Determinar o próximo lotNumber
+            const getLotQuery = "SELECT MAX(lotNumber) AS lastLot FROM item WHERE batchCode = ?";
+            const lotResult = await queryAsync(getLotQuery, [batchCode]);
+            const nextLotNumber = (lotResult.length > 0 && lotResult[0].lastLot !== null) ? lotResult[0].lastLot + 1 : 1;
+
+            // 3. Inserir o novo lote usando os dados do item base e os novos dados
+            const insertLotQuery = "INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, lotNumber, category, fkIdLocation, fkIdImage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            const lotValues = [
+                baseItem.name,
+                baseItem.aliases,
+                baseItem.brand,
+                baseItem.description,
+                baseItem.technicalSpecs,
+                quantity,
+                expirationDate,
+                batchCode,
+                nextLotNumber,
+                baseItem.category,
+                fkIdLocation,
+                baseItem.fkIdImage,
+            ];
+            const lotResultInsert = await queryAsync(insertLotQuery, lotValues);
+            const newLotId = lotResultInsert.insertId;
+
+            // 4. Inserir a transação
+            const insertTransactionQuery = "INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity) VALUES (?, ?, ?, ?, ?, ?)";
+            const transactionValues = [fkIdUser, newLotId, 'IN', quantity, 0, quantity];
+            await queryAsync(insertTransactionQuery, transactionValues);
+
+            await queryAsync("COMMIT");
+
+            return handleResponse(res, 201, { message: "Novo lote criado com sucesso!", lotId: newLotId, lotNumber: nextLotNumber });
+        } catch (error) {
+            await queryAsync("ROLLBACK");
+            console.error("Erro ao criar novo lote:", error);
             return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
         }
     }
@@ -415,5 +478,3 @@ class ItemController {
         }
     }
 }
-
-module.exports = ItemController;

@@ -29,6 +29,7 @@ router.get("/item/:category/details", verifyJWT, itemController.getItemsByCatego
 router.get("/item/check/:batchCode", verifyJWT, itemController.checkItemByBatchCode);
 
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
+router.post("/item/lot/:batchCode", verifyJWT, authorizeManager, itemController.createLot);
 router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemController.updateItemInformation);
 router.put("/item/information/batch/:batchCode", verifyJWT, authorizeManager, itemController.updateItemInformation);
 router.put("/item/quantity/:idItem", verifyJWT, authorizeManager, itemController.updateItemQuantity);

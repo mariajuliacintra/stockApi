@@ -39,7 +39,7 @@ CREATE TABLE item (
     technicalSpecs TEXT,
     quantity DECIMAL(10, 2) NOT NULL DEFAULT 0.0,
     expirationDate DATE DEFAULT NULL,
-    batchCode VARCHAR(255) NOT NULL,
+    batchCode VARCHAR(255) NOT NULL UNIQUE,
     lotNumber INT NOT NULL,
     fkIdImage INT DEFAULT NULL,
     category ENUM('tool', 'material', 'rawMaterial', 'equipment', 'product', 'diverses') NOT NULL,

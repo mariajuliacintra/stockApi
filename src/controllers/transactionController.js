@@ -1,14 +1,14 @@
-const { queryAsync } = require('../utils/functions');
+const { queryAsync, handleResponse } = require('../utils/functions');
 
 module.exports = class TransactionController {
     static async getAllTransactions (req, res) {
         try {
             const query = "SELECT * FROM transactions";
             const transactions = await queryAsync(query);
-            res.status(200).json(transactions);
+            handleResponse(res, 200, transactions);
         } catch (error) {
             console.error("Erro ao buscar transações:", error);
-            res.status(500).json({ error: "Erro interno do servidor" });
+            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -17,13 +17,15 @@ module.exports = class TransactionController {
         try {
             const query = "SELECT * FROM transactions WHERE idTransaction = ?";
             const transaction = await queryAsync(query, [idTransaction]);
+
             if (transaction.length === 0) {
-                return res.status(404).json({ message: "Transação não encontrada." });
+                return handleResponse(res, 404, { message: "Transação não encontrada." });
             }
-            res.status(200).json(transaction[0]);
+
+            handleResponse(res, 200, transaction[0]);
         } catch (error) {
             console.error("Erro ao buscar transação por ID:", error);
-            res.status(500).json({ error: "Erro interno do servidor" });
+            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -31,7 +33,7 @@ module.exports = class TransactionController {
         const { fkIdUser, fkIdItem, actionDescription, quantityChange } = req.body;
         try {
             if (!fkIdUser || !fkIdItem || !actionDescription || quantityChange === undefined || isNaN(quantityChange) || quantityChange <= 0) {
-                return res.status(400).json({ message: "Campos obrigatórios inválidos ou ausentes." });
+                return handleResponse(res, 400, { message: "Campos obrigatórios inválidos ou ausentes." });
             }
 
             const userQuery = "SELECT COUNT(*) AS count FROM user WHERE idUser = ?";
@@ -41,11 +43,11 @@ module.exports = class TransactionController {
             const itemResult = await queryAsync(itemQuery, [fkIdItem]);
 
             if (userResult[0].count === 0) {
-                return res.status(404).json({ message: "Usuário não encontrado." });
+                return handleResponse(res, 404, { message: "Usuário não encontrado." });
             }
 
             if (itemResult.length === 0) {
-                return res.status(404).json({ message: "Item não encontrado." });
+                return handleResponse(res, 404, { message: "Item não encontrado." });
             }
 
             const oldQuantity = itemResult[0].quantity;
@@ -55,13 +57,13 @@ module.exports = class TransactionController {
                 newQuantity = parseFloat(oldQuantity) + parseFloat(quantityChange);
             } else if (actionDescription === 'OUT') {
                 if (parseFloat(oldQuantity) < parseFloat(quantityChange)) {
-                    return res.status(400).json({ message: "Quantidade insuficiente em estoque." });
+                    return handleResponse(res, 400, { message: "Quantidade insuficiente em estoque." });
                 }
                 newQuantity = parseFloat(oldQuantity) - parseFloat(quantityChange);
             } else if (actionDescription === 'AJUST') {
                 newQuantity = parseFloat(oldQuantity) + parseFloat(quantityChange);
             } else {
-                return res.status(400).json({ message: "Ação inválida. Use 'IN', 'OUT' ou 'AJUST'." });
+                return handleResponse(res, 400, { message: "Ação inválida. Use 'IN', 'OUT' ou 'AJUST'." });
             }
 
             const insertTransactionQuery = "INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity, transactionDate) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
@@ -77,12 +79,12 @@ module.exports = class TransactionController {
 
             await queryAsync("COMMIT");
 
-            res.status(201).json({ message: "Transação registrada e item atualizado com sucesso!" });
+            handleResponse(res, 201, { message: "Transação registrada e item atualizado com sucesso!" });
 
         } catch (error) {
             await queryAsync("ROLLBACK");
             console.error("Erro ao registrar transação:", error);
-            res.status(500).json({ error: "Erro interno do servidor", details: error.message });
+            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -93,13 +95,13 @@ module.exports = class TransactionController {
             const transactions = await queryAsync(query, [fkIdItem]);
 
             if (transactions.length === 0) {
-                return res.status(404).json({ message: "Nenhuma transação encontrada para este item." });
+                return handleResponse(res, 404, { message: "Nenhuma transação encontrada para este item." });
             }
 
-            res.status(200).json(transactions);
+            handleResponse(res, 200, transactions);
         } catch (error) {
             console.error("Erro ao buscar transações por item:", error);
-            res.status(500).json({ error: "Erro interno do servidor" });
+            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -110,13 +112,13 @@ module.exports = class TransactionController {
             const transactions = await queryAsync(query, [fkIdUser]);
 
             if (transactions.length === 0) {
-                return res.status(404).json({ message: "Nenhuma transação encontrada para este usuário." });
+                return handleResponse(res, 404, { message: "Nenhuma transação encontrada para este usuário." });
             }
 
-            res.status(200).json(transactions);
+            handleResponse(res, 200, transactions);
         } catch (error) {
             console.error("Erro ao buscar transações por usuário:", error);
-            res.status(500).json({ error: "Erro interno do servidor" });
+            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
         }
     }
 };
