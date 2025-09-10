@@ -5,6 +5,7 @@ DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS item;
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS location;
+DROP TABLE IF EXISTS image;
 
 CREATE TABLE location (
     idLocation INT PRIMARY KEY AUTO_INCREMENT,
@@ -23,6 +24,11 @@ CREATE TABLE user (
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE image (
+    idImage INT PRIMARY KEY AUTO_INCREMENT,
+    imageData LONGBLOB NOT NULL
+);
+
 CREATE TABLE item (
     idItem INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
@@ -34,17 +40,18 @@ CREATE TABLE item (
     expirationDate DATE DEFAULT NULL,
     batchCode VARCHAR(255) NOT NULL,
     lotNumber INT NOT NULL,
-    image LONGBLOB DEFAULT NULL,
-    UNIQUE(batchCode, lotNumber),
+    fkIdImage INT DEFAULT NULL,
     category ENUM('tool', 'material', 'rawMaterial', 'equipment', 'product', 'diverses') NOT NULL,
-    fkIdLocation INT,
-    FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation)
+    fkIdLocation INT, 
+    UNIQUE(batchCode, lotNumber),
+    FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation),
+    FOREIGN KEY (fkIdImage) REFERENCES image(idImage) ON DELETE CASCADE
 );
 
 CREATE TABLE transactions (
     idTransaction INT PRIMARY KEY AUTO_INCREMENT,
     fkIdUser INT NOT NULL,
-    fkIdItem INT NOT NULL, 	
+    fkIdItem INT NOT NULL,
     actionDescription ENUM('IN', 'OUT', 'AJUST') NOT NULL,
     quantityChange DECIMAL(10, 2) NOT NULL,
     oldQuantity DECIMAL(10, 2),
@@ -63,6 +70,7 @@ CREATE INDEX idxTransactionsFkIdUser ON transactions(fkIdUser);
 CREATE INDEX idxTransactionsFkIdItem ON transactions(fkIdItem);
 CREATE INDEX idxTransactionsDate ON transactions(transactionDate);
 CREATE INDEX idxTransactionsAction ON transactions(actionDescription);
+CREATE INDEX idxItemFkIdImage ON item(fkIdImage);
 
 INSERT INTO location (place, code) VALUES
 ('Prateleira', 'A1'), ('Prateleira', 'A2'), ('Prateleira', 'A3'),
@@ -75,7 +83,7 @@ INSERT INTO user (name, email, hashedPassword, role) VALUES
 ('Vinicius Fogaça', 'vfogacacintra@gmail.com', '$2a$12$Dgp7DDOLi91NJYR0abt.yuwSy7dDHDuS3wp/QRw02rs06HqDMr8WS', 'manager'),
 ('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
 
-INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, lotNumber, category, fkIdLocation, image) VALUES
+INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, lotNumber, category, fkIdLocation, fkIdImage) VALUES
 ('Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 15, NULL, 'MRT-202501-001', 1, 'tool', 1, NULL),
 ('Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '19mm x 20m', 25.0, '2026-10-01', 'FSL-202610-009', 1, 'material', 2, NULL),
 ('Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 50.0, '2027-02-15', 'TDT-202702-014', 1, 'product', 3, NULL),
