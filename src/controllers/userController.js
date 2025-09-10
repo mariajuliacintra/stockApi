@@ -1,474 +1,404 @@
 const validateUser = require("../services/validateUser");
 const mailSender = require("../services/mail/mailSender");
-const {
-  queryAsync,
-  createToken,
-  generateRandomCode,
-} = require("../utils/functions");
+const { queryAsync, createToken, generateRandomCode, handleResponse, handleAuthError } = require("../utils/functions");
+const { findUserByEmail, findUserById } = require("../utils/querys");
 const bcrypt = require("bcrypt");
 
 const tempUsers = {};
 
 module.exports = class UserController {
-  static async registerUser(req, res) {
-    const { name, email, password, confirmPassword } = req.body;
+    static async registerUser(req, res) {
+        const { name, email, password } = req.body;
 
-    const userValidationError = validateUser.validateUser(req.body);
-    if (userValidationError) {
-      return res.status(400).json(userValidationError);
-    }
-
-    try {
-      const emailValidationError = await validateUser.validateEmail(email);
-      if (emailValidationError && emailValidationError.error) {
-        return res.status(400).json(emailValidationError);
-      }
-
-      const verificationCode = generateRandomCode();
-      const emailSent = await mailSender.sendVerificationEmail(
-        email,
-        verificationCode,
-        "mailVerification.html"
-      );
-
-      if (!emailSent) {
-        return res
-          .status(500)
-          .json({ error: "Erro ao enviar o e-mail de verificação." });
-      }
-
-      const saltRounds = Number(process.env.SALT_ROUNDS);
-      const hashedPassword = bcrypt.hashSync(password, saltRounds);
-
-      tempUsers[email] = {
-        name,
-        email,
-        hashedPassword,
-        verificationCode,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      };
-
-      return res.status(200).json({
-        message:
-          "Usuário temporariamente cadastrado. Verifique seu e-mail para o código de verificação.",
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
-    }
-  }
-
-  static async verifyUser(req, res) {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res
-        .status(400)
-        .json({ error: "E-mail e código são obrigatórios.", auth: false });
-    }
-
-    const storedUser = tempUsers[email];
-
-    if (
-      !storedUser ||
-      storedUser.verificationCode !== code ||
-      Date.now() > storedUser.expiresAt
-    ) {
-      return res
-        .status(401)
-        .json({ error: "Código de verificação inválido ou expirado.", auth: false });
-    }
-
-    try {
-      const { name, hashedPassword } = storedUser;
-      const queryInsert = `INSERT INTO user (name, email, hashedPassword, role) VALUES (?, ?, ?, "user")`;
-      const valuesInsert = [name, email, hashedPassword];
-      await queryAsync(queryInsert, valuesInsert);
-
-      const querySelect = `SELECT * FROM user WHERE email = ?`;
-      const results = await queryAsync(querySelect, [email]);
-
-      if (results.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
-      }
-
-      const user = results[0];
-      const token = createToken({
-        idUser: user.idUser,
-        email: user.email,
-        role: user.role,
-      });
-
-      delete tempUsers[email];
-
-      return res.status(200).json({
-        message: "Cadastro bem-sucedido",
-        user,
-        token,
-        auth: true,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
-    }
-  }
-
-  static async loginUser(req, res) {
-    const { email, password } = req.body;
-
-    const loginValidationError = validateUser.validateLogin(req.body);
-    if (loginValidationError) {
-      return res.status(400).json({ ...loginValidationError, auth: false });
-    }
-
-    const query = `SELECT * FROM user WHERE email = ?`;
-
-    try {
-      const results = await queryAsync(query, [email]);
-
-      if (results.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
-      }
-
-      const user = results[0];
-      const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
-
-      if (!passwordOK) {
-        return res.status(401).json({ error: "Senha Incorreta", auth: false });
-      }
-
-      const token = createToken({
-        idUser: user.idUser,
-        email: user.email,
-        role: user.role,
-      });
-
-      return res.status(200).json({
-        message: "Login Bem-sucedido",
-        user,
-        token,
-        auth: true,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
-    }
-  }
-
-  static async getAllUsers(req, res) {
-    const query = `SELECT * FROM user`;
-    try {
-      const results = await queryAsync(query);
-      return res
-        .status(200)
-        .json({ message: "Obtendo todos os usuários", users: results, auth: true });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
-    }
-  }
-
-  static async updateUser(req, res) {
-    const { idUser } = req.params;
-    const { name, email, password, confirmPassword } = req.body;
-
-    if (req.userId != idUser) {
-      return res.status(403).json({ error: "Não autorizado", auth: false });
-    }
-
-    const updateValidationError = validateUser.validateUpdate(req.body, idUser);
-    if (updateValidationError) {
-      return res.status(400).json({ ...updateValidationError, auth: false });
-    }
-
-    try {
-      const userExistsQuery = `SELECT * FROM user WHERE idUser = ?`;
-      const userExistsResults = await queryAsync(userExistsQuery, [idUser]);
-      if (userExistsResults.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
-      }
-
-      const userToUpdate = userExistsResults[0];
-
-      if (email && email !== userToUpdate.email) {
-        const emailValidationError = await validateUser.validateEmail(email);
-        if (emailValidationError && emailValidationError.error) {
-          return res.status(400).json({ ...emailValidationError, auth: false });
+        const userValidationError = validateUser.validateUser(req.body);
+        if (userValidationError) {
+            return handleResponse(res, 400, userValidationError);
         }
 
-        const verificationCode = generateRandomCode();
-        const emailSent = await mailSender.sendVerificationEmail(
-          email,
-          verificationCode,
-          "updateVerification.html"
-        );
+        try {
+            const userToReactivate = await validateUser.findUserByEmailAndActiveStatus(email, false);
+            if (userToReactivate) {
+                const verificationCode = generateRandomCode();
+                const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
+    
+                if (!emailSent) {
+                    return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação." });
+                }
 
-        if (!emailSent) {
-          return res
-            .status(500)
-            .json({ error: "Erro ao enviar o e-mail de verificação.", auth: false });
+                const saltRounds = Number(process.env.SALT_ROUNDS);
+                const hashedPassword = bcrypt.hashSync(password, saltRounds);
+    
+                tempUsers[email] = {
+                    idUser: userToReactivate.idUser,
+                    name,
+                    hashedPassword,
+                    verificationCode,
+                    expiresAt: Date.now() + 5 * 60 * 1000,
+                    reactivating: true
+                };
+    
+                return handleResponse(res, 200, {
+                    message: "E-mail já cadastrado, mas a conta está inativa. Um código de verificação foi enviado para reativá-la."
+                });
+            }
+
+            const emailValidationError = await validateUser.validateEmail(email);
+            if (emailValidationError && emailValidationError.error) {
+                return handleResponse(res, 400, emailValidationError);
+            }
+
+            const verificationCode = generateRandomCode();
+            const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
+
+            if (!emailSent) {
+                return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação." });
+            }
+
+            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const hashedPassword = bcrypt.hashSync(password, saltRounds);
+
+            tempUsers[email] = {
+                name,
+                email,
+                hashedPassword,
+                verificationCode,
+                expiresAt: Date.now() + 5 * 60 * 1000,
+            };
+
+            return handleResponse(res, 200, {
+                message: "Usuário temporariamente cadastrado. Verifique seu e-mail para o código de verificação.",
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor" });
         }
-        
-        const hashedPassword = password
-          ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS))
-          : userToUpdate.hashedPassword;
-
-        tempUsers[email] = {
-          idUser,
-          name: name || userToUpdate.name,
-          oldEmail: userToUpdate.email,
-          newEmail: email,
-          hashedPassword,
-          verificationCode,
-          expiresAt: Date.now() + 5 * 60 * 1000,
-        };
-
-        return res.status(200).json({
-          message:
-            "Verificação de e-mail necessária. Um código foi enviado para o novo e-mail.",
-          auth: true,
-        });
-      }
-
-      const fieldsToUpdate = [];
-      const values = [];
-
-      if (name) {
-        fieldsToUpdate.push("name = ?");
-        values.push(name);
-      }
-
-      if (password) {
-        const saltRounds = Number(process.env.SALT_ROUNDS);
-        const hashedPassword = bcrypt.hashSync(password, saltRounds);
-        fieldsToUpdate.push("hashedPassword = ?");
-        values.push(hashedPassword);
-      }
-
-      if (fieldsToUpdate.length === 0) {
-        return res
-          .status(400)
-          .json({ error: "Nenhum campo para atualizar foi fornecido.", auth: true });
-      }
-
-      const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(
-        ", "
-      )} WHERE idUser = ?`;
-      values.push(idUser);
-
-      await queryAsync(updateQuery, values);
-
-      const updatedUserQuery = `SELECT idUser, name, email FROM user WHERE idUser = ?`;
-      const updatedUserResults = await queryAsync(updatedUserQuery, [idUser]);
-      const updatedUser = updatedUserResults[0];
-
-      await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
-
-      return res.status(200).json({
-        message: "Usuário atualizado com sucesso.",
-        user: updatedUser,
-        auth: true,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
-    }
-  }
-
-  static async verifyUpdate(req, res) {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res
-        .status(400)
-        .json({ error: "E-mail e código são obrigatórios.", auth: false });
     }
 
-    const storedUpdate = tempUsers[email];
+    static async verifyUser(req, res) {
+        const { email, code } = req.body;
 
-    if (
-      !storedUpdate ||
-      storedUpdate.verificationCode !== code ||
-      Date.now() > storedUpdate.expiresAt
-    ) {
-      return res
-        .status(401)
-        .json({ error: "Código de verificação inválido ou expirado.", auth: false });
+        if (!email || !code) {
+            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios.", auth: false });
+        }
+
+        const storedUser = tempUsers[email];
+
+        if (!storedUser || storedUser.verificationCode !== code || Date.now() > storedUser.expiresAt) {
+            return handleAuthError(res, "Código de verificação inválido ou expirado.");
+        }
+
+        try {
+            if (storedUser.reactivating) {
+                const { idUser, name, hashedPassword } = storedUser;
+                const reactivateQuery = `UPDATE user SET name = ?, hashedPassword = ?, isActive = TRUE WHERE idUser = ?`;
+                await queryAsync(reactivateQuery, [name, hashedPassword, idUser]);
+                
+                const user = await findUserById(idUser);
+                const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
+                delete tempUsers[email];
+    
+                return handleResponse(res, 200, {
+                    message: "Conta reativada com sucesso!",
+                    user,
+                    token,
+                    auth: true
+                });
+            }
+
+            const { name, hashedPassword } = storedUser;
+            const queryInsert = `INSERT INTO user (name, email, hashedPassword, role) VALUES (?, ?, ?, "user")`;
+            const valuesInsert = [name, email, hashedPassword];
+            await queryAsync(queryInsert, valuesInsert);
+
+            const user = await findUserByEmail(email);
+            if (!user) {
+                return handleResponse(res, 404, { error: "Usuário não encontrado", auth: false });
+            }
+
+            const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
+            delete tempUsers[email];
+
+            return handleResponse(res, 200, {
+                message: "Cadastro bem-sucedido",
+                user,
+                token,
+                auth: true,
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+        }
     }
 
-    try {
-      const { idUser, name, newEmail, hashedPassword } = storedUpdate;
+    static async loginUser(req, res) {
+        const { email, password } = req.body;
 
-      const fieldsToUpdate = [];
-      const values = [];
+        const loginValidationError = validateUser.validateLogin(req.body);
+        if (loginValidationError) {
+            return handleResponse(res, 400, { ...loginValidationError, auth: false });
+        }
 
-      fieldsToUpdate.push("name = ?");
-      values.push(name);
+        try {
+            const user = await findUserByEmail(email);
 
-      fieldsToUpdate.push("email = ?");
-      values.push(newEmail);
+            if (!user) {
+                return handleResponse(res, 404, { error: "Usuário não encontrado", auth: false });
+            }
 
-      fieldsToUpdate.push("hashedPassword = ?");
-      values.push(hashedPassword);
+            const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
+            if (!passwordOK) {
+                return handleAuthError(res, "Senha Incorreta");
+            }
 
-      const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(
-        ", "
-      )} WHERE idUser = ?`;
-      values.push(idUser);
+            const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
 
-      await queryAsync(updateQuery, values);
-
-      const updatedUserQuery = `SELECT idUser, name, email FROM user WHERE idUser = ?`;
-      const updatedUserResults = await queryAsync(updatedUserQuery, [idUser]);
-      const updatedUser = updatedUserResults[0];
-
-      delete tempUsers[email];
-
-      await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
-
-      return res.status(200).json({
-        message: "Usuário atualizado com sucesso.",
-        user: updatedUser,
-        auth: true,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
-    }
-  }
-
-  static async deleteUser(req, res) {
-    const { idUser } = req.params;
-
-    if (req.userId != idUser) {
-      return res.status(403).json({ error: "Não autorizado", auth: false });
+            return handleResponse(res, 200, {
+                message: "Login Bem-sucedido",
+                user,
+                token,
+                auth: true,
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+        }
     }
 
-    try {
-      const userExistsQuery = `SELECT idUser, name, email FROM user WHERE idUser = ?`;
-      const userExistsResults = await queryAsync(userExistsQuery, [idUser]);
-      if (userExistsResults.length === 0) {
-        return res.status(404).json({ error: "Usuário não encontrado", auth: false });
-      }
-
-      const userToDelete = userExistsResults[0];
-
-      const deleteQuery = `DELETE FROM user WHERE idUser = ?`;
-      await queryAsync(deleteQuery, [idUser]);
-
-      await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
-
-      return res.status(200).json({
-        message: "Usuário deletado com sucesso.",
-        auth: true,
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor", auth: false });
-    }
-  }
-
-  static async verifyRecoveryPassword(req, res) {
-    const { email } = req.body;
-
-    try {
-      const query = `SELECT email FROM user WHERE email = ?`;
-      const results = await queryAsync(query, [email]);
-
-      if (results.length === 0) {
-        return res.status(404).json({ error: "E-mail não encontrado." });
-      }
-
-      const verificationCode = generateRandomCode();
-      const emailSent = await mailSender.sendPasswordRecoveryEmail(
-        email,
-        verificationCode
-      );
-
-      if (!emailSent) {
-        return res
-          .status(500)
-          .json({ error: "Erro ao enviar o e-mail de recuperação." });
-      }
-
-      tempUsers[email] = {
-        verificationCode,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      };
-
-      return res.status(200).json({
-        message: "Código de recuperação enviado para o seu e-mail.",
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
-    }
-  }
-
-  static async validateRecoveryCode(req, res) {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res
-        .status(400)
-        .json({ error: "E-mail e código são obrigatórios." });
+    static async getAllUsers(req, res) {
+        const query = `SELECT idUser, name, email, role, createdAt FROM user WHERE isActive = TRUE`;
+        try {
+            const results = await queryAsync(query);
+            return handleResponse(res, 200, { message: "Obtendo todos os usuários", users: results, auth: true });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+        }
     }
 
-    const storedRecovery = tempUsers[email];
+    static async updateUser(req, res) {
+        const { idUser } = req.params;
+        const { name, email, password } = req.body;
 
-    if (
-      !storedRecovery ||
-      storedRecovery.verificationCode !== code ||
-      Date.now() > storedRecovery.expiresAt
-    ) {
-      return res
-        .status(401)
-        .json({ error: "Código de recuperação inválido ou expirado." });
+        if (req.userId != idUser) {
+            return handleResponse(res, 403, { error: "Não autorizado", auth: false });
+        }
+
+        const updateValidationError = validateUser.validateUpdate(req.body, idUser);
+        if (updateValidationError) {
+            return handleResponse(res, 400, { ...updateValidationError, auth: false });
+        }
+
+        try {
+            const userToUpdate = await findUserById(idUser);
+            if (!userToUpdate) {
+                return handleResponse(res, 404, { error: "Usuário não encontrado", auth: false });
+            }
+
+            if (email && email !== userToUpdate.email) {
+                const emailValidationError = await validateUser.validateEmail(email);
+                if (emailValidationError && emailValidationError.error) {
+                    return handleResponse(res, 400, { ...emailValidationError, auth: false });
+                }
+
+                const verificationCode = generateRandomCode();
+                const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "updateVerification.html");
+
+                if (!emailSent) {
+                    return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação.", auth: false });
+                }
+
+                const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword;
+
+                tempUsers[email] = {
+                    idUser,
+                    name: name || userToUpdate.name,
+                    oldEmail: userToUpdate.email,
+                    newEmail: email,
+                    hashedPassword,
+                    verificationCode,
+                    expiresAt: Date.now() + 5 * 60 * 1000,
+                };
+
+                return handleResponse(res, 200, {
+                    message: "Verificação de e-mail necessária. Um código foi enviado para o novo e-mail.",
+                    auth: true,
+                });
+            }
+
+            const fieldsToUpdate = [];
+            const values = [];
+
+            if (name) {
+                fieldsToUpdate.push("name = ?");
+                values.push(name);
+            }
+
+            if (password) {
+                const saltRounds = Number(process.env.SALT_ROUNDS);
+                const hashedPassword = bcrypt.hashSync(password, saltRounds);
+                fieldsToUpdate.push("hashedPassword = ?");
+                values.push(hashedPassword);
+            }
+
+            if (fieldsToUpdate.length === 0) {
+                return handleResponse(res, 400, { error: "Nenhum campo para atualizar foi fornecido.", auth: true });
+            }
+
+            const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
+            values.push(idUser);
+
+            await queryAsync(updateQuery, values);
+            const updatedUser = await findUserById(idUser);
+            await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
+
+            return handleResponse(res, 200, {
+                message: "Usuário atualizado com sucesso.",
+                user: updatedUser,
+                auth: true,
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+        }
     }
 
-    return res.status(200).json({
-      message:
-        "Código de recuperação validado com sucesso. Agora você pode alterar sua senha.",
-    });
-  }
+    static async verifyUpdate(req, res) {
+        const { email, code } = req.body;
 
-  static async recoveryPassword(req, res) {
-    const { email, password, confirmPassword } = req.body;
+        if (!email || !code) {
+            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios.", auth: false });
+        }
 
-    const storedRecovery = tempUsers[email];
+        const storedUpdate = tempUsers[email];
 
-    if (!storedRecovery || Date.now() > storedRecovery.expiresAt) {
-      return res
-        .status(401)
-        .json({
-          error:
-            "Código de recuperação inválido ou expirado. Por favor, solicite um novo código.",
+        if (!storedUpdate || storedUpdate.verificationCode !== code || Date.now() > storedUpdate.expiresAt) {
+            return handleAuthError(res, "Código de verificação inválido ou expirado.");
+        }
+
+        try {
+            const { idUser, name, newEmail, hashedPassword } = storedUpdate;
+            const updateQuery = `UPDATE user SET name = ?, email = ?, hashedPassword = ? WHERE idUser = ?`;
+            await queryAsync(updateQuery, [name, newEmail, hashedPassword, idUser]);
+
+            const updatedUser = await findUserById(idUser);
+            delete tempUsers[email];
+            await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
+
+            return handleResponse(res, 200, {
+                message: "Usuário atualizado com sucesso.",
+                user: updatedUser,
+                auth: true,
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+        }
+    }
+
+    static async deleteUser(req, res) {
+        const { idUser } = req.params;
+
+        if (req.userId != idUser) {
+            return handleResponse(res, 403, { error: "Não autorizado", auth: false });
+        }
+
+        try {
+            const userToDelete = await findUserById(idUser);
+            if (!userToDelete) {
+                return handleResponse(res, 404, { error: "Usuário não encontrado ou já desativado", auth: false });
+            }
+
+            const updateQuery = `UPDATE user SET isActive = FALSE WHERE idUser = ?`;
+            await queryAsync(updateQuery, [idUser]);
+
+            await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
+
+            return handleResponse(res, 200, {
+                message: "Usuário desativado com sucesso.",
+                auth: true,
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+        }
+    }
+
+    static async verifyRecoveryPassword(req, res) {
+        const { email } = req.body;
+
+        try {
+            const user = await findUserByEmail(email);
+            if (!user) {
+                return handleResponse(res, 404, { error: "E-mail não encontrado." });
+            }
+
+            const verificationCode = generateRandomCode();
+            const emailSent = await mailSender.sendPasswordRecoveryEmail(email, verificationCode);
+
+            if (!emailSent) {
+                return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de recuperação." });
+            }
+
+            tempUsers[email] = {
+                verificationCode,
+                expiresAt: Date.now() + 5 * 60 * 1000,
+            };
+
+            return handleResponse(res, 200, {
+                message: "Código de recuperação enviado para o seu e-mail.",
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor" });
+        }
+    }
+
+    static async validateRecoveryCode(req, res) {
+        const { email, code } = req.body;
+
+        if (!email || !code) {
+            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios." });
+        }
+
+        const storedRecovery = tempUsers[email];
+
+        if (!storedRecovery || storedRecovery.verificationCode !== code || Date.now() > storedRecovery.expiresAt) {
+            return handleAuthError(res, "Código de recuperação inválido ou expirado.");
+        }
+
+        return handleResponse(res, 200, {
+            message: "Código de recuperação validado com sucesso. Agora você pode alterar sua senha.",
         });
     }
 
-    const recoveryValidationError = validateUser.validateRecovery({
-      password,
-      confirmPassword,
-    });
-    if (recoveryValidationError) {
-      return res.status(400).json(recoveryValidationError);
+    static async recoveryPassword(req, res) {
+        const { email, password } = req.body;
+
+        const storedRecovery = tempUsers[email];
+        if (!storedRecovery || Date.now() > storedRecovery.expiresAt) {
+            return handleAuthError(res, "Código de recuperação inválido ou expirado. Por favor, solicite um novo código.");
+        }
+
+        const recoveryValidationError = validateUser.validateRecovery(req.body);
+        if (recoveryValidationError) {
+            return handleResponse(res, 400, recoveryValidationError);
+        }
+
+        try {
+            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const hashedPassword = bcrypt.hashSync(password, saltRounds);
+
+            const updateQuery = `UPDATE user SET hashedPassword = ? WHERE email = ?`;
+            await queryAsync(updateQuery, [hashedPassword, email]);
+
+            delete tempUsers[email];
+
+            return handleResponse(res, 200, {
+                message: "Senha alterada com sucesso.",
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor" });
+        }
     }
-
-    try {
-      const saltRounds = Number(process.env.SALT_ROUNDS);
-      const hashedPassword = bcrypt.hashSync(password, saltRounds);
-
-      const updateQuery = `UPDATE user SET hashedPassword = ? WHERE email = ?`;
-      await queryAsync(updateQuery, [hashedPassword, email]);
-
-      delete tempUsers[email];
-
-      return res.status(200).json({
-        message: "Senha alterada com sucesso.",
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro Interno do Servidor" });
-    }
-  }
-}
+};
