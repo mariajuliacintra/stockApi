@@ -1,6 +1,6 @@
 const validateUser = require("../services/validateUser");
 const mailSender = require("../services/mail/mailSender");
-const { queryAsync, createToken, generateRandomCode, handleResponse, handleAuthError } = require("../utils/functions");
+const { queryAsync, createToken, generateRandomCode, handleResponse } = require("../utils/functions");
 const { findUserByEmail, findUserById } = require("../utils/querys");
 const bcrypt = require("bcrypt");
 
@@ -84,7 +84,7 @@ module.exports = class UserController {
         const storedUser = tempUsers[email];
 
         if (!storedUser || storedUser.verificationCode !== code || Date.now() > storedUser.expiresAt) {
-            return handleAuthError(res, "Código de verificação inválido ou expirado.");
+            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
         }
 
         try {
@@ -147,7 +147,7 @@ module.exports = class UserController {
 
             const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
             if (!passwordOK) {
-                return handleAuthError(res, "Senha Incorreta");
+                return handleResponse(res, 401, { error: "Senha Incorreta" });
             }
 
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
@@ -272,7 +272,7 @@ module.exports = class UserController {
         const storedUpdate = tempUsers[email];
 
         if (!storedUpdate || storedUpdate.verificationCode !== code || Date.now() > storedUpdate.expiresAt) {
-            return handleAuthError(res, "Código de verificação inválido ou expirado.");
+            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
         }
 
         try {
@@ -363,7 +363,7 @@ module.exports = class UserController {
         const storedRecovery = tempUsers[email];
 
         if (!storedRecovery || storedRecovery.verificationCode !== code || Date.now() > storedRecovery.expiresAt) {
-            return handleAuthError(res, "Código de recuperação inválido ou expirado.");
+            return handleResponse(res, 401, { error: "Código de recuperação inválido ou expirado." });
         }
 
         return handleResponse(res, 200, {
@@ -376,7 +376,7 @@ module.exports = class UserController {
 
         const storedRecovery = tempUsers[email];
         if (!storedRecovery || Date.now() > storedRecovery.expiresAt) {
-            return handleAuthError(res, "Código de recuperação inválido ou expirado. Por favor, solicite um novo código.");
+            return handleResponse(res, 401, { error: "Código de recuperação inválido ou expirado. Por favor, solicite um novo código." });
         }
 
         const recoveryValidationError = validateUser.validateRecovery(req.body);

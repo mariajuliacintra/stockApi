@@ -9,12 +9,12 @@ module.exports = class ItemController {
             const item = await queryAsync(query, [batchCode]);
             
             if (item.length > 0) {
-                return handleResponse(res, 200, { exists: true, message: "Lote encontrado." });
+                return handleResponse(res, 200, { exists: true, message: "Item encontrado." });
             } else {
-                return handleResponse(res, 404, { exists: false, message: "Lote não encontrado." });
+                return handleResponse(res, 404, { exists: false, message: "Item não encontrado." });
             }
         } catch (error) {
-            console.error("Erro ao verificar lote:", error);
+            console.error("Erro ao verificar item:", error);
             return handleResponse(res, 500, { error: "Erro interno do servidor" });
         }
     }
