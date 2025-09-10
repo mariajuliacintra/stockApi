@@ -25,6 +25,9 @@ router.get("/items/", verifyJWT, itemController.getAllItems);
 router.get("/items/details", verifyJWT, itemController.getAllItemsDetails);
 router.get("/item/:category", verifyJWT, itemController.getItemsByCategory);
 router.get("/item/:category/details", verifyJWT, itemController.getItemsByCategoryDetails);
+
+router.get("/item/check/:batchCode", verifyJWT, itemController.checkItemByBatchCode);
+
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
 router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemController.updateItemInformation);
 router.put("/item/information/batch/:batchCode", verifyJWT, authorizeManager, itemController.updateItemInformation);

@@ -2,6 +2,9 @@ const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const tokenSecret = process.env.SECRET;
 
+const handleResponse = (res, status, data) => res.status(status).json(data);
+const handleAuthError = (res, message) => handleResponse(res, 401, { auth: false, error: message });
+
 const queryAsync = (query, values = []) => {
   return new Promise((resolve, reject) => {
     connect.query(query, values, (err, results) => {
@@ -42,4 +45,4 @@ function generateRandomCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-module.exports = { queryAsync, validatePassword, validateDomain, createToken, generateRandomCode };
+module.exports = { queryAsync, validatePassword, validateDomain, createToken, generateRandomCode, handleResponse, handleAuthError };
