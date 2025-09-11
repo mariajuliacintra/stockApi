@@ -12,6 +12,7 @@ const transactionController = require("../controllers/transactionController");
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
+const upload = require('../services/upload');
 
 router.post("/user/register", userController.registerUser);
 router.post("/user/verify-register", userController.verifyUser);
@@ -37,6 +38,11 @@ router.get("/item/check/:sapCode", verifyJWT, itemController.checkItemBySapCode)
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
 router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemController.updateItemInformation);
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
+
+// Novas rotas para a gestão de imagens de itens
+router.post("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.createImage);
+router.put("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.updateImage);
+router.delete("/item/image/:idItem", verifyJWT, authorizeManager, itemController.deleteImage);
 
 // Rotas para a criação e gerenciamento de lotes
 router.post("/lot/sapcode/:sapCode", verifyJWT, authorizeManager, lotController.createLotBySapCode);

@@ -28,7 +28,8 @@ CREATE TABLE user (
 
 CREATE TABLE image (
     idImage INT PRIMARY KEY AUTO_INCREMENT,
-    imageData LONGBLOB NOT NULL
+    imageData LONGBLOB NOT NULL,
+    imageType VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE item (
