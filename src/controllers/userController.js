@@ -1,6 +1,6 @@
 const validateUser = require("../services/validateUser");
 const mailSender = require("../services/mail/mailSender");
-const { queryAsync, createToken, generateRandomCode, handleResponse, handleAuthError } = require("../utils/functions");
+const { queryAsync, createToken, generateRandomCode, handleResponse } = require("../utils/functions");
 const { findUserByEmail, findUserById } = require("../utils/querys");
 const bcrypt = require("bcrypt");
 
@@ -20,14 +20,14 @@ module.exports = class UserController {
             if (userToReactivate) {
                 const verificationCode = generateRandomCode();
                 const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
-    
+
                 if (!emailSent) {
                     return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação." });
                 }
 
                 const saltRounds = Number(process.env.SALT_ROUNDS);
                 const hashedPassword = bcrypt.hashSync(password, saltRounds);
-    
+
                 tempUsers[email] = {
                     idUser: userToReactivate.idUser,
                     name,
@@ -36,7 +36,7 @@ module.exports = class UserController {
                     expiresAt: Date.now() + 5 * 60 * 1000,
                     reactivating: true
                 };
-    
+
                 return handleResponse(res, 200, {
                     message: "E-mail já cadastrado, mas a conta está inativa. Um código de verificação foi enviado para reativá-la."
                 });
@@ -84,7 +84,7 @@ module.exports = class UserController {
         const storedUser = tempUsers[email];
 
         if (!storedUser || storedUser.verificationCode !== code || Date.now() > storedUser.expiresAt) {
-            return handleAuthError(res, "Código de verificação inválido ou expirado.");
+            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
         }
 
         try {
@@ -96,10 +96,12 @@ module.exports = class UserController {
                 const user = await findUserById(idUser);
                 const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
                 delete tempUsers[email];
-    
+
+                const isManager = user.role === "manager";
+                
                 return handleResponse(res, 200, {
                     message: "Conta reativada com sucesso!",
-                    user,
+                    user: { ...user, isManager },
                     token,
                     auth: true
                 });
@@ -118,9 +120,11 @@ module.exports = class UserController {
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
             delete tempUsers[email];
 
+            const isManager = user.role === "manager";
+            
             return handleResponse(res, 200, {
                 message: "Cadastro bem-sucedido",
-                user,
+                user: { ...user, isManager },
                 token,
                 auth: true,
             });
@@ -147,14 +151,16 @@ module.exports = class UserController {
 
             const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
             if (!passwordOK) {
-                return handleAuthError(res, "Senha Incorreta");
+                return handleResponse(res, 401, { error: "Senha Incorreta" });
             }
 
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
 
+            const isManager = user.role === "manager";
+
             return handleResponse(res, 200, {
                 message: "Login Bem-sucedido",
-                user,
+                user: { ...user, isManager },
                 token,
                 auth: true,
             });
@@ -272,7 +278,7 @@ module.exports = class UserController {
         const storedUpdate = tempUsers[email];
 
         if (!storedUpdate || storedUpdate.verificationCode !== code || Date.now() > storedUpdate.expiresAt) {
-            return handleAuthError(res, "Código de verificação inválido ou expirado.");
+            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
         }
 
         try {
@@ -363,7 +369,7 @@ module.exports = class UserController {
         const storedRecovery = tempUsers[email];
 
         if (!storedRecovery || storedRecovery.verificationCode !== code || Date.now() > storedRecovery.expiresAt) {
-            return handleAuthError(res, "Código de recuperação inválido ou expirado.");
+            return handleResponse(res, 401, { error: "Código de recuperação inválido ou expirado." });
         }
 
         return handleResponse(res, 200, {
@@ -376,7 +382,7 @@ module.exports = class UserController {
 
         const storedRecovery = tempUsers[email];
         if (!storedRecovery || Date.now() > storedRecovery.expiresAt) {
-            return handleAuthError(res, "Código de recuperação inválido ou expirado. Por favor, solicite um novo código.");
+            return handleResponse(res, 401, { error: "Código de recuperação inválido ou expirado. Por favor, solicite um novo código." });
         }
 
         const recoveryValidationError = validateUser.validateRecovery(req.body);

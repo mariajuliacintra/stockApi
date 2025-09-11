@@ -1,14 +1,18 @@
 const router = require("express").Router();
 
-const ReportControllerExcel = require("../controllers/reportControllerExcel");
+const reportControllerExcel = require("../controllers/reportControllerExcel");
 const reportControllerPdf = require("../controllers/reportControllerPdf");
+
 const userController = require("../controllers/userController");
+
 const itemController = require("../controllers/itemController");
+const lotController = require("../controllers/lotController");
 const locationController = require("../controllers/locationController");
 const transactionController = require("../controllers/transactionController");
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
+const upload = require('../services/upload');
 
 router.post("/user/register", userController.registerUser);
 router.post("/user/verify-register", userController.verifyUser);
@@ -21,20 +25,31 @@ router.post("/user/verify-recovery-password", userController.verifyRecoveryPassw
 router.post("/user/validate-recovery-code", userController.validateRecoveryCode);
 router.post("/user/recovery-password", userController.recoveryPassword);
 
-router.get("/items/", verifyJWT, itemController.getAllItems);
+// Rotas para buscar informações de itens
+router.get("/items", verifyJWT, itemController.getAllItems);
 router.get("/items/details", verifyJWT, itemController.getAllItemsDetails);
-router.get("/item/:category", verifyJWT, itemController.getItemsByCategory);
-router.get("/item/:category/details", verifyJWT, itemController.getItemsByCategoryDetails);
+router.get("/items/category/:category", verifyJWT, itemController.getItemsByCategory);
+router.get("/items/category/:category/details", verifyJWT, itemController.getItemsByCategoryDetails);
 
-router.get("/item/check/:batchCode", verifyJWT, itemController.checkItemByBatchCode);
+// Rotas para checagem de itens
+router.get("/item/check/:sapCode", verifyJWT, itemController.checkItemBySapCode);
 
+// Rotas para a criação e gerenciamento de itens
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
-router.post("/item/lot/:batchCode", verifyJWT, authorizeManager, itemController.createLot);
 router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemController.updateItemInformation);
-router.put("/item/information/batch/:batchCode", verifyJWT, authorizeManager, itemController.updateItemInformation);
-router.put("/item/quantity/:idItem", verifyJWT, authorizeManager, itemController.updateItemQuantity);
-router.put("/item/quantity/batch/:batchCode", verifyJWT, authorizeManager, itemController.updateItemQuantity);
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
+
+// Novas rotas para a gestão de imagens de itens
+router.post("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.createImage);
+router.put("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.updateImage);
+router.delete("/item/image/:idItem", verifyJWT, authorizeManager, itemController.deleteImage);
+
+// Rotas para a criação e gerenciamento de lotes
+router.post("/lot/sapcode/:sapCode", verifyJWT, authorizeManager, lotController.createLotBySapCode);
+router.post("/lot/item/:idItem", verifyJWT, authorizeManager, lotController.createLotByIdItem);
+
+router.put("/lot/quantity/:idLot", verifyJWT, authorizeManager, lotController.updateLotQuantity);
+router.put("/lot/information/:idLot", verifyJWT, authorizeManager, lotController.updateLotInformation);
 
 router.get("/location", verifyJWT, locationController.getLocations);
 router.get("/location/:idLocation", verifyJWT, locationController.getLocationById);
@@ -46,9 +61,9 @@ router.get("/report/pdf/general",verifyJWT, authorizeManager, reportControllerPd
 router.get("/report/pdf/low-stock", verifyJWT, authorizeManager, reportControllerPdf.generateLowStockReport);
 router.get("/report/pdf/transactions", verifyJWT, authorizeManager,reportControllerPdf.generateTransactionsReport);
 
-router.get("/report/excel/general", ReportControllerExcel.generateGeneralReportExcel);
-router.get("/report/excel/low-stock",ReportControllerExcel.generateLowStockReportExcel);
-router.get("/report/excel/transactions", ReportControllerExcel.generateTransactionsReportExcel);
+router.get("/report/excel/general", reportControllerExcel.generateGeneralReportExcel);
+router.get("/report/excel/low-stock",reportControllerExcel.generateLowStockReportExcel);
+router.get("/report/excel/transactions", reportControllerExcel.generateTransactionsReportExcel);
 
 router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
 router.get("/transactions/:idTransaction", verifyJWT, authorizeManager, transactionController.getTransactionById);

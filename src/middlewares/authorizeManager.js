@@ -8,5 +8,4 @@ const authorizeManager = (req, res, next) => {
     next();
   };
   
-  module.exports = authorizeManager;
-  
+module.exports = authorizeManager;
