@@ -20,14 +20,14 @@ module.exports = class UserController {
             if (userToReactivate) {
                 const verificationCode = generateRandomCode();
                 const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
-    
+
                 if (!emailSent) {
                     return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação." });
                 }
 
                 const saltRounds = Number(process.env.SALT_ROUNDS);
                 const hashedPassword = bcrypt.hashSync(password, saltRounds);
-    
+
                 tempUsers[email] = {
                     idUser: userToReactivate.idUser,
                     name,
@@ -36,7 +36,7 @@ module.exports = class UserController {
                     expiresAt: Date.now() + 5 * 60 * 1000,
                     reactivating: true
                 };
-    
+
                 return handleResponse(res, 200, {
                     message: "E-mail já cadastrado, mas a conta está inativa. Um código de verificação foi enviado para reativá-la."
                 });
@@ -96,10 +96,12 @@ module.exports = class UserController {
                 const user = await findUserById(idUser);
                 const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
                 delete tempUsers[email];
-    
+
+                const isManager = user.role === "manager";
+                
                 return handleResponse(res, 200, {
                     message: "Conta reativada com sucesso!",
-                    user,
+                    user: { ...user, isManager },
                     token,
                     auth: true
                 });
@@ -118,9 +120,11 @@ module.exports = class UserController {
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
             delete tempUsers[email];
 
+            const isManager = user.role === "manager";
+            
             return handleResponse(res, 200, {
                 message: "Cadastro bem-sucedido",
-                user,
+                user: { ...user, isManager },
                 token,
                 auth: true,
             });
@@ -152,9 +156,11 @@ module.exports = class UserController {
 
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
 
+            const isManager = user.role === "manager";
+
             return handleResponse(res, 200, {
                 message: "Login Bem-sucedido",
-                user,
+                user: { ...user, isManager },
                 token,
                 auth: true,
             });
