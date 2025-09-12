@@ -26,9 +26,12 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT 
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.category, i.fkIdImage, i.sapCode,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, 
+                    JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category, 
+                    i.sapCode,
                     SUM(l.quantity) as totalQuantity
                 FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
                 LEFT JOIN lots l ON i.idItem = l.fkIdItem
                 GROUP BY i.idItem
             `;
@@ -44,7 +47,9 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT 
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.category, i.fkIdImage, i.sapCode,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, 
+                    JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category, 
+                    i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
                     SUM(l.quantity) as totalQuantity,
                     JSON_ARRAYAGG(
@@ -57,6 +62,7 @@ module.exports = class ItemController {
                         )
                     ) AS lots
                 FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
                 LEFT JOIN lots l ON i.idItem = l.fkIdItem
                 LEFT JOIN location loc ON l.fkIdLocation = loc.idLocation
                 LEFT JOIN image img ON i.fkIdImage = img.idImage
@@ -87,19 +93,22 @@ module.exports = class ItemController {
         }
     }
 
-    static async getItemsByCategory(req, res) {
-        const { category } = req.params;
+    static async getItemsByCategoryId(req, res) {
+        const { idCategory } = req.params;
         try {
             const query = `
                 SELECT 
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.category, i.fkIdImage, i.sapCode,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, 
+                    JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category, 
+                    i.sapCode,
                     SUM(l.quantity) as totalQuantity
                 FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
                 LEFT JOIN lots l ON i.idItem = l.fkIdItem
-                WHERE i.category = ?
+                WHERE c.idCategory = ?
                 GROUP BY i.idItem
             `;
-            const items = await queryAsync(query, [category]);
+            const items = await queryAsync(query, [idCategory]);
             if (items.length === 0) {
                 return handleResponse(res, 404, { message: "Nenhum item encontrado para esta categoria." });
             }
@@ -109,13 +118,15 @@ module.exports = class ItemController {
             return handleResponse(res, 500, { error: "Erro interno do servidor" });
         }
     }
-    
-    static async getItemsByCategoryDetails(req, res) {
-        const { category } = req.params;
+
+    static async getItemsByCategoryDetailsId(req, res) {
+        const { idCategory } = req.params;
         try {
             const query = `
                 SELECT 
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.category, i.fkIdImage, i.sapCode,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, 
+                    JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category, 
+                    i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
                     SUM(l.quantity) as totalQuantity,
                     JSON_ARRAYAGG(
@@ -128,14 +139,15 @@ module.exports = class ItemController {
                         )
                     ) AS lots
                 FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
                 LEFT JOIN lots l ON i.idItem = l.fkIdItem
                 LEFT JOIN location loc ON l.fkIdLocation = loc.idLocation
                 LEFT JOIN image img ON i.fkIdImage = img.idImage
-                WHERE i.category = ?
+                WHERE c.idCategory = ?
                 GROUP BY i.idItem
                 ORDER BY i.name
             `;
-            const items = await queryAsync(query, [category]);
+            const items = await queryAsync(query, [idCategory]);
             if (items.length === 0) {
                 return handleResponse(res, 404, { message: "Nenhum item encontrado para esta categoria." });
             }
@@ -171,6 +183,7 @@ module.exports = class ItemController {
             expirationDate,
             fkIdLocation,
             fkIdUser,
+            fkIdCategory,
             ...itemData
         } = req.body;
         
@@ -195,10 +208,10 @@ module.exports = class ItemController {
             }
             
             const insertItemQuery = `
-                INSERT INTO item (sapCode, name, aliases, brand, description, technicalSpecs, category)
+                INSERT INTO item (sapCode, name, aliases, brand, description, technicalSpecs, fkIdCategory)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
             `;
-            const itemValues = [sapCode, name, aliases, itemData.brand, itemData.description, itemData.technicalSpecs, itemData.category];
+            const itemValues = [sapCode, name, aliases, itemData.brand, itemData.description, itemData.technicalSpecs, fkIdCategory];
             const itemResult = await queryAsync(insertItemQuery, itemValues);
             const fkIdItem = itemResult.insertId;
 
@@ -334,12 +347,12 @@ module.exports = class ItemController {
             return handleResponse(res, 400, { message: errorMessage });
         }
 
-        const { sapCode: newSapCode } = data;
+        const { sapCode: newSapCode, fkIdCategory } = data;
 
         try {
             await queryAsync("START TRANSACTION");
 
-            const findItemQuery = "SELECT sapCode, fkIdImage FROM item WHERE idItem = ?";
+            const findItemQuery = "SELECT sapCode, fkIdImage, fkIdCategory FROM item WHERE idItem = ?";
             const [existingItem] = await queryAsync(findItemQuery, [idItem]);
             if (!existingItem) {
                 await queryAsync("ROLLBACK");
@@ -359,6 +372,10 @@ module.exports = class ItemController {
             if (newSapCode !== undefined) {
                 fieldsToUpdate.push('sapCode');
                 data.sapCode = newSapCode;
+            }
+            if (fkIdCategory !== undefined && fkIdCategory !== existingItem.fkIdCategory) {
+                fieldsToUpdate.push('fkIdCategory');
+                data.fkIdCategory = fkIdCategory;
             }
 
             if (fieldsToUpdate.length === 0) {

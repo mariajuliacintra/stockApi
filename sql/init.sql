@@ -4,9 +4,15 @@ USE stock;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS lots;
 DROP TABLE IF EXISTS item;
+DROP TABLE IF EXISTS category;
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS location;
 DROP TABLE IF EXISTS image;
+
+CREATE TABLE category (
+    idCategory INT PRIMARY KEY AUTO_INCREMENT,
+    categoryValue VARCHAR(255) NOT NULL UNIQUE
+);
 
 CREATE TABLE location (
     idLocation INT PRIMARY KEY AUTO_INCREMENT,
@@ -39,9 +45,10 @@ CREATE TABLE item (
     brand VARCHAR(255),
     description TEXT,
     technicalSpecs TEXT,
-    category ENUM('tool', 'material', 'rawMaterial', 'equipment', 'product', 'diverses') NOT NULL,
     sapCode INT UNIQUE,
+    fkIdCategory INT NOT NULL,
     fkIdImage INT DEFAULT NULL,
+    FOREIGN KEY (fkIdCategory) REFERENCES category(idCategory),
     FOREIGN KEY (fkIdImage) REFERENCES image(idImage) ON DELETE SET NULL
 );
 
@@ -71,7 +78,7 @@ CREATE TABLE transactions (
 );
 
 CREATE INDEX idxItemName ON item(name);
-CREATE INDEX idxItemCategory ON item(category);
+CREATE INDEX idxItemCategory ON item(fkIdCategory);
 CREATE INDEX idxLotsFkIdLocation ON lots(fkIdLocation);
 CREATE INDEX idxLotsExpirationDate ON lots(expirationDate);
 CREATE INDEX idxUserRole ON user(role);
@@ -80,6 +87,14 @@ CREATE INDEX idxTransactionsFkLot ON transactions(fkIdLot);
 CREATE INDEX idxTransactionsDate ON transactions(transactionDate);
 CREATE INDEX idxTransactionsAction ON transactions(actionDescription);
 CREATE INDEX idxItemFkIdImage ON item(fkIdImage);
+
+INSERT INTO category (categoryValue) VALUES
+('Ferramenta'),
+('Material'),
+('Matéria Prima'),
+('Equipamento'),
+('Produto'),
+('Diversos');
 
 INSERT INTO location (place, code) VALUES
 ('Prateleira', 'A1'), ('Prateleira', 'A2'), ('Prateleira', 'A3'),
@@ -92,12 +107,12 @@ INSERT INTO user (name, email, hashedPassword, role) VALUES
 ('Vinicius Fogaça', 'vfogacacintra@gmail.com', '$2a$12$Dgp7DDOLi91NJYR0abt.yuwSy7dDHDuS3wp/QRw02rs06HqDMr8WS', 'manager'),
 ('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
 
-INSERT INTO item (idItem, name, aliases, brand, description, technicalSpecs, category, sapCode, fkIdImage) VALUES
-(1, 'Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 'tool', 202501001, NULL),
-(2, 'Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '19mm x 20m', 'material', 202610009, NULL),
-(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 'product', 202702014, NULL),
-(4, 'Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '1.5V', 'diverses', 202801001, NULL),
-(5, 'Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '1L', 'rawMaterial', 202612005, NULL);
+INSERT INTO item (idItem, name, aliases, brand, description, technicalSpecs, fkIdCategory, sapCode, fkIdImage) VALUES
+(1, 'Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 1, 202501001, NULL),
+(2, 'Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '19mm x 20m', 2, 202610009, NULL),
+(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 5, 202702014, NULL),
+(4, 'Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '1.5V', 6, 202801001, NULL),
+(5, 'Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '1L', 3, 202612005, NULL);
 
 INSERT INTO lots (idLot, lotNumber, quantity, expirationDate, fkIdLocation, fkIdItem) VALUES
 (1, 1, 15.0, NULL, 1, 1),
