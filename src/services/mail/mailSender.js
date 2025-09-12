@@ -95,30 +95,77 @@ async function sendPasswordRecoveryEmail(email, code) {
     }
 }
 
-async function sendWarningEmail(toEmails, items) {
+async function sendWarningEmail(toEmails, subject, message, items) {
     try {
         const templatePath = path.join(__dirname, 'templates', 'warningEmail.html');
         let htmlTemplate = await fs.readFile(templatePath, 'utf8');
 
-        let itemsHtml = '';
-        items.forEach(item => {
-            itemsHtml += `
-            <tr>
-                <td>${item.itemType}</td>
-                <td>${item.name}</td>
-                <td>${item.batchCode}</td>
-                <td>${item.expirationDate ? new Date(item.expirationDate).toLocaleDateString('pt-BR') : 'N/A'}</td>
-                <td>${item.status}</td>
-            </tr>
-            `;
-        });
+        // Determina se o e-mail é sobre validade ou estoque mínimo.
+        const isExpirationEmail = items.some(item => 'expirationDate' in item);
 
+        // Gera o cabeçalho da tabela dinamicamente
+        let tableHeaderHtml = '';
+        if (isExpirationEmail) {
+            tableHeaderHtml = `
+                <tr>
+                    <th>Categoria</th>
+                    <th>Nome</th>
+                    <th>Lote</th>
+                    <th>Data de Validade</th>
+                    <th>Status</th>
+                </tr>
+            `;
+        } else {
+            tableHeaderHtml = `
+                <tr>
+                    <th>Nome</th>
+                    <th>Código SAP</th>
+                    <th>Total em Estoque</th>
+                    <th>Estoque Mínimo</th>
+                </tr>
+            `;
+        }
+
+        // Gera as linhas da tabela
+        let itemsHtml = '';
+        if (Array.isArray(items) && items.length > 0) {
+            items.forEach(item => {
+                if (isExpirationEmail) {
+                    const expirationDate = item.expirationDate ? new Date(item.expirationDate).toLocaleDateString('pt-BR') : 'N/A';
+                    itemsHtml += `
+                        <tr>
+                            <td>${item.categoryValue || 'N/A'}</td>
+                            <td>${item.name || 'N/A'}</td>
+                            <td>${item.lotNumber || 'N/A'}</td>
+                            <td>${expirationDate}</td>
+                            <td>${item.status || 'N/A'}</td>
+                        </tr>
+                    `;
+                } else {
+                    itemsHtml += `
+                        <tr>
+                            <td>${item.name || 'N/A'}</td>
+                            <td>${item.sapCode || 'N/A'}</td>
+                            <td>${item.totalQuantity || 'N/A'}</td>
+                            <td>${item.minimumStock || 'N/A'}</td>
+                        </tr>
+                    `;
+                }
+            });
+        } else {
+            // Caso não haja itens para exibir (para evitar que a tabela seja gerada vazia).
+            itemsHtml = '<tr><td colspan="5">Nenhum item encontrado.</td></tr>';
+        }
+
+        // Substitui os placeholders no template
+        htmlTemplate = htmlTemplate.replace('{{message}}', message);
+        htmlTemplate = htmlTemplate.replace('{{tableHeader}}', tableHeaderHtml);
         htmlTemplate = htmlTemplate.replace('{{items}}', itemsHtml);
 
         const mailOptions = {
             from: process.env.GMAIL_USER,
             to: toEmails.join(', '),
-            subject: 'Aviso de Validade de Itens de Estoque',
+            subject: subject,
             html: htmlTemplate,
         };
 
