@@ -32,7 +32,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
@@ -121,7 +121,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode,
                     SUM(l.quantity) as totalQuantity
@@ -142,7 +142,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
@@ -230,7 +230,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode,
                     SUM(l.quantity) as totalQuantity
@@ -256,7 +256,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
@@ -345,6 +345,7 @@ module.exports = class ItemController {
             sapCode,
             name,
             aliases,
+            minimumStock,
             quantity,
             expirationDate,
             fkIdLocation,
@@ -371,10 +372,10 @@ module.exports = class ItemController {
                 });
             }
             const insertItemQuery = `
-                INSERT INTO item (sapCode, name, aliases, brand, description, technicalSpecs, fkIdCategory)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO item (sapCode, name, aliases, brand, description, technicalSpecs, minimumStock, fkIdCategory)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
-            const itemValues = [sapCode, name, aliases, itemData.brand, itemData.description, JSON.stringify(technicalSpecs), fkIdCategory];
+            const itemValues = [sapCode, name, aliases, itemData.brand, itemData.description, JSON.stringify(technicalSpecs), minimumStock, fkIdCategory];
             const itemResult = await queryAsync(insertItemQuery, itemValues);
             const fkIdItem = itemResult.insertId;
             const getLotNumberQuery = `
@@ -540,71 +541,55 @@ module.exports = class ItemController {
         }
     }
 
-    static async createImage(req, res) {
-        const { idItem } = req.params;
-        const imageFile = req.file;
-        if (!imageFile) {
-            return handleResponse(res, 400, { message: "Nenhuma imagem foi enviada." });
-        }
-        try {
-            const [item] = await queryAsync("SELECT fkIdImage FROM item WHERE idItem = ?", [idItem]);
-            if (!item) {
-                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-                return handleResponse(res, 404, { message: "Item não encontrado." });
-            }
-            if (item.fkIdImage) {
-                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-                return handleResponse(res, 409, { message: "Este item já possui uma imagem. Use a rota de atualização para substituí-la." });
-            }
-            const imageData = await fs.readFile(imageFile.path);
-            const imageType = imageFile.mimetype;
-            const imageResult = await queryAsync("INSERT INTO image (imageData, imageType) VALUES (?, ?)", [imageData, imageType]);
-            const fkIdImage = imageResult.insertId;
-            await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [fkIdImage, idItem]);
-            await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-            return handleResponse(res, 201, { message: "Imagem adicionada com sucesso ao item!", fkIdImage: fkIdImage });
-        } catch (error) {
-            console.error("Erro ao adicionar imagem ao item:", error);
-            if (imageFile) {
-                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-            }
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
-        }
+static async insertImage(req, res) {
+    const { idItem } = req.params;
+    const imageFile = req.file;
+
+    if (!imageFile) {
+        return handleResponse(res, 400, { message: "Nenhuma imagem foi enviada." });
     }
 
-    static async updateImage(req, res) {
-        const { idItem } = req.params;
-        const imageFile = req.file;
-        if (!imageFile) {
-            return handleResponse(res, 400, { message: "Nenhuma imagem foi enviada para atualização." });
+    try {
+        const [item] = await queryAsync("SELECT fkIdImage FROM item WHERE idItem = ?", [idItem]);
+
+        if (!item) {
+            await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
+            return handleResponse(res, 404, { message: "Item não encontrado." });
         }
-        try {
-            const [item] = await queryAsync("SELECT fkIdImage FROM item WHERE idItem = ?", [idItem]);
-            if (!item) {
-                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-                return handleResponse(res, 404, { message: "Item não encontrado." });
-            }
-            const imageData = await fs.readFile(imageFile.path);
-            const imageType = imageFile.mimetype;
-            if (item.fkIdImage) {
-                await queryAsync("UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?", [imageData, imageType, item.fkIdImage]);
-                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-                return handleResponse(res, 200, { message: "Imagem do item atualizada com sucesso!" });
-            } else {
-                const imageResult = await queryAsync("INSERT INTO image (imageData, imageType) VALUES (?, ?)", [imageData, imageType]);
-                const fkIdImage = imageResult.insertId;
-                await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [fkIdImage, idItem]);
-                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-                return handleResponse(res, 201, { message: "Imagem criada e associada ao item com sucesso!", fkIdImage: fkIdImage });
-            }
-        } catch (error) {
-            console.error("Erro ao atualizar/criar imagem do item:", error);
-            if (imageFile) {
-                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-            }
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+
+        const imageData = await fs.readFile(imageFile.path);
+        const imageType = imageFile.mimetype;
+
+        let message;
+        let statusCode;
+        let fkIdImage;
+
+        if (item.fkIdImage) {
+            // Atualizar a imagem existente
+            await queryAsync("UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?", [imageData, imageType, item.fkIdImage]);
+            fkIdImage = item.fkIdImage;
+            message = "Imagem do item atualizada com sucesso!";
+            statusCode = 200;
+        } else {
+            // Inserir uma nova imagem
+            const imageResult = await queryAsync("INSERT INTO image (imageData, imageType) VALUES (?, ?)", [imageData, imageType]);
+            fkIdImage = imageResult.insertId;
+            await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [fkIdImage, idItem]);
+            message = "Imagem adicionada com sucesso ao item!";
+            statusCode = 201;
         }
+
+        await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
+        return handleResponse(res, statusCode, { message, fkIdImage });
+
+    } catch (error) {
+        console.error("Erro ao inserir/atualizar imagem do item:", error);
+        if (imageFile) {
+            await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
+        }
+        return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
     }
+}
 
     static async deleteImage(req, res) {
         const { idItem } = req.params;

@@ -10,7 +10,7 @@ class AppController {
     this.middlewares();
     this.routes();
     testConnect();
-    require('./services/cronjobVerification');
+    require('./services/cron/cronjobVerification');
     const uploadsDir = path.join(__dirname, 'uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir);

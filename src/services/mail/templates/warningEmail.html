@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aviso de Validade de Itens</title>
+    <title>{{subject}}</title>
     <style>
+        /* (Seu CSS aqui) */
         body { 
             font-family: 'Inter', sans-serif; 
             background-color: #f3f4f6;
@@ -84,32 +85,20 @@
         </div>
 
         <div class="content">
-            <h1>Aviso de Validade de Itens</h1>
+            <h1>Aviso de Estoque</h1>
             
-            <p>Olá,</p>
-            
-            <p>
-                A verificação automática de estoque encontrou itens que estão expirados ou próximos de sua data de validade.
-            </p>
+            <p>{{message}}</p>
             
             <table class="items-table">
                 <thead>
-                    <tr>
-                        <th>Tipo</th>
-                        <th>Nome</th>
-                        <th>Lote</th>
-                        <th>Data de Validade</th>
-                        <th>Status</th>
-                    </tr>
+                    {{tableHeader}}
                 </thead>
                 <tbody>
                     {{items}}
                 </tbody>
             </table>
             
-            <p>
-                Por favor, verifique o sistema de estoque para tomar as medidas necessárias.
-            </p>
+            <p>Por favor, verifique o sistema de estoque para tomar as medidas necessárias.</p>
         </div>
 
         <div class="footer">
