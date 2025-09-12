@@ -234,6 +234,96 @@ module.exports = class ItemController {
         }
     }
 
+    static async updateSingleLotQuantity(req, res) {
+        const { idItem } = req.params;
+        const { quantity: rawQuantity, isAjust, fkIdUser } = req.body;
+
+        if (idItem === undefined || isNaN(Number(idItem))) {
+            return handleResponse(res, 400, { message: "O ID do item é obrigatório e deve ser um número." });
+        }
+        if (fkIdUser === undefined || isNaN(Number(fkIdUser))) {
+            return handleResponse(res, 400, { message: "O ID do usuário é obrigatório e deve ser um número." });
+        }
+        if (typeof isAjust !== 'boolean') {
+            return handleResponse(res, 400, { message: "O campo 'isAjust' deve ser um booleano (true ou false)." });
+        }
+
+        let quantityNum; 
+        let actionDescription;
+        let quantityChange; 
+
+        try {
+            quantityNum = parseFloat(rawQuantity);
+            if (isNaN(quantityNum)) {
+                return handleResponse(res, 400, { message: "A quantidade é obrigatória e deve ser um número válido." });
+            }
+
+            await queryAsync("START TRANSACTION");
+
+            const countLotsQuery = "SELECT COUNT(*) AS lotCount FROM lots WHERE fkIdItem = ?";
+            const [lotCountResult] = await queryAsync(countLotsQuery, [idItem]);
+            const lotCount = lotCountResult.lotCount;
+
+            if (lotCount !== 1) {
+                await queryAsync("ROLLBACK");
+                const message = lotCount === 0 ?
+                    "Item não encontrado ou não possui lotes." :
+                    "Este item possui mais de um lote. Esta operação é apenas para itens com um único lote.";
+                return handleResponse(res, 404, { message });
+            }
+
+            const getLotInfoQuery = "SELECT idLot, quantity AS currentQuantity FROM lots WHERE fkIdItem = ?";
+            const [lotInfo] = await queryAsync(getLotInfoQuery, [idItem]);
+
+            const idLot = lotInfo.idLot;
+            const currentQuantity = parseFloat(lotInfo.currentQuantity);
+
+            let newQuantity;
+
+            if (isAjust) {
+                newQuantity = quantityNum;
+                quantityChange = newQuantity - currentQuantity;
+                actionDescription = 'AJUST';
+            } else {
+                if (quantityNum > 0) {
+                    newQuantity = currentQuantity + quantityNum;
+                    quantityChange = quantityNum;
+                    actionDescription = 'IN';
+                } else {
+                    const quantityToRemove = Math.abs(quantityNum);
+                    newQuantity = currentQuantity - quantityToRemove;
+                    quantityChange = -quantityToRemove; 
+                    actionDescription = 'OUT';
+                }
+
+                if (newQuantity < 0) {
+                    await queryAsync("ROLLBACK");
+                    return handleResponse(res, 400, { message: "A remoção de quantidade resultaria em um estoque negativo." });
+                }
+            }
+
+            newQuantity = parseFloat(newQuantity.toFixed(4));
+            quantityChange = parseFloat(quantityChange.toFixed(4)); 
+
+            const updateLotQuery = "UPDATE lots SET quantity = ? WHERE idLot = ?";
+            await queryAsync(updateLotQuery, [newQuantity, idLot]);
+
+            const insertTransactionQuery = `
+                INSERT INTO transactions (fkIdUser, fkIdLot, actionDescription, quantityChange, oldQuantity, newQuantity)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `;
+            await queryAsync(insertTransactionQuery, [fkIdUser, idLot, actionDescription, quantityChange, currentQuantity, newQuantity]);
+
+            await queryAsync("COMMIT");
+            return handleResponse(res, 200, { message: "Quantidade do lote atualizada com sucesso!", idLot, newQuantity });
+
+        } catch (error) {
+            console.error("Erro ao atualizar quantidade do lote único:", error);
+            await queryAsync("ROLLBACK");
+            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+        }
+    }
+
     static async updateItemInformation(req, res) {
         const { idItem } = req.params;
         const data = req.body;

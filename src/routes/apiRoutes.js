@@ -36,6 +36,7 @@ router.get("/item/check/:sapCode", verifyJWT, itemController.checkItemBySapCode)
 
 // Rotas para a criação e gerenciamento de itens
 router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
+router.put('/item/:idItem/lot/quantity', verifyJWT, authorizeManager, itemController.updateSingleLotQuantity);
 router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemController.updateItemInformation);
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
 
