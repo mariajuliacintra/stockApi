@@ -33,8 +33,6 @@ router.post("/user/recovery-password", userController.recoveryPassword);
 router.get("/items", verifyJWT, itemController.getAllItems);
 router.get("/item/:idItem/details", verifyJWT, itemController.getItemByIdDetails);
 router.get("/items/details", verifyJWT, itemController.getAllItemsDetails);
-router.get("/items/category/:idCategory", verifyJWT, itemController.getItemsByCategoryId);
-router.get("/items/category/:idCategory/details", verifyJWT, itemController.getItemsByCategoryDetailsId);
 
 // Rotas para checagem de itens
 router.get("/item/check/:sapCode", verifyJWT, itemController.checkItemBySapCode);
