@@ -52,6 +52,7 @@ CREATE TABLE item (
     description TEXT,
     technicalSpecs JSON DEFAULT NULL,
     sapCode INT UNIQUE,
+    minimumStock INT DEFAULT NULL,
     fkIdCategory INT NOT NULL,
     fkIdImage INT DEFAULT NULL,
     FOREIGN KEY (fkIdCategory) REFERENCES category(idCategory),
@@ -132,12 +133,12 @@ INSERT INTO user (name, email, hashedPassword, role) VALUES
 ('Vinicius Fogaça', 'vfogacacintra@gmail.com', '$2a$12$Dgp7DDOLi91NJYR0abt.yuwSy7dDHDuS3wp/QRw02rs06HqDMr8WS', 'manager'),
 ('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
 
-INSERT INTO item (idItem, name, aliases, brand, description, technicalSpecs, fkIdCategory, sapCode, fkIdImage) VALUES
-(1, 'Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '{"1": "500g", "8": "Madeira e Aço"}', 1, 202501001, NULL),
-(2, 'Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '{"7": "Preta", "10": "20m"}', 2, 202610009, NULL),
-(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '{"9": "400ml", "7": "Amarelo"}', 5, 202702014, NULL),
-(4, 'Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '{"2": "1.5V"}', 6, 202801001, NULL),
-(5, 'Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '{"10": "1L"}', 3, 202612005, NULL);
+INSERT INTO item (idItem, name, aliases, brand, description, technicalSpecs, sapCode, minimumStock, fkIdCategory, fkIdImage) VALUES
+(1, 'Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '{"1": "500g", "8": "Madeira e Aço"}', 202501001, 5, 1, NULL),
+(2, 'Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '{"7": "Preta", "10": "20m"}', 202610009, 10, 2, NULL),
+(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '{"9": "400ml", "7": "Amarelo"}', 202702014, NULL, 5, NULL),
+(4, 'Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '{"2": "1.5V"}', 202801001, 20, 6, NULL),
+(5, 'Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '{"10": "1L"}', 202612005, 2, 3, NULL);
 
 INSERT INTO lots (idLot, lotNumber, quantity, expirationDate, fkIdLocation, fkIdItem) VALUES
 (1, 1, 15.0, NULL, 1, 1),

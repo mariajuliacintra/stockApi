@@ -12,10 +12,17 @@ const validateForeignKey = async (tableName, idName, idValue) => {
 };
 
 const validateCreateItem = async (data) => {
-    const { name, aliases, brand, description, technicalSpecs, fkIdCategory, quantity, expirationDate, fkIdLocation, fkIdUser, sapCode } = data;
+    const { name, aliases, brand, description, technicalSpecs, fkIdCategory, minimumStock, quantity, expirationDate, fkIdLocation, fkIdUser, sapCode } = data;
 
     if (!name || fkIdCategory === undefined || quantity === undefined || fkIdLocation === undefined || fkIdUser === undefined) {
         return { isValid: false, message: "Campos obrigatórios: 'name', 'fkIdCategory', 'quantity', 'fkIdLocation', e 'fkIdUser' são necessários." };
+    }
+
+    if (minimumStock !== undefined) {
+        const numericMinimumStock = Number(minimumStock);
+        if (isNaN(numericMinimumStock) || !Number.isInteger(numericMinimumStock) || numericMinimumStock < 0) {
+            return { isValid: false, message: "O estoque mínimo deve ser um número inteiro não negativo." };
+        }
     }
 
     const numericQuantity = Number(quantity);
@@ -59,14 +66,14 @@ const validateCreateItem = async (data) => {
 };
 
 const validateUpdateInformation = (data) => {
-    const updateFields = ['name', 'aliases', 'brand', 'description', 'technicalSpecs', 'fkIdCategory', 'sapCode'];
+    const updateFields = ['name', 'aliases', 'brand', 'description', 'technicalSpecs', 'fkIdCategory', 'sapCode', 'minimumStock'];
     const hasUpdateField = updateFields.some(field => data[field] !== undefined);
 
     if (!hasUpdateField) {
         return { isValid: false, message: "Pelo menos um campo para atualização de informações deve ser fornecido." };
     }
 
-    const { category: fkIdCategory, sapCode } = data;
+    const { category: fkIdCategory, sapCode, minimumStock } = data;
 
     if (fkIdCategory !== undefined) {
         const numericCategory = Number(fkIdCategory);
@@ -80,6 +87,13 @@ const validateUpdateInformation = (data) => {
         const numericSapCode = Number(sapCode);
         if (isNaN(numericSapCode) || !Number.isInteger(numericSapCode)) {
             return { isValid: false, message: "O código SAP deve ser um número inteiro." };
+        }
+    }
+
+    if (minimumStock !== undefined) {
+        const numericMinimumStock = Number(minimumStock);
+        if (isNaN(numericMinimumStock) || !Number.isInteger(numericMinimumStock) || numericMinimumStock < 0) {
+            return { isValid: false, message: "O estoque mínimo deve ser um número inteiro não negativo." };
         }
     }
 

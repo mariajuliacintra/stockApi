@@ -32,7 +32,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
@@ -121,7 +121,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode,
                     SUM(l.quantity) as totalQuantity
@@ -142,7 +142,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
@@ -230,7 +230,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode,
                     SUM(l.quantity) as totalQuantity
@@ -256,7 +256,7 @@ module.exports = class ItemController {
         try {
             const query = `
                 SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs,
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
                     JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
                     i.sapCode, i.fkIdImage,
                     img.imageData, img.imageType,
@@ -345,6 +345,7 @@ module.exports = class ItemController {
             sapCode,
             name,
             aliases,
+            minimumStock,
             quantity,
             expirationDate,
             fkIdLocation,
@@ -371,10 +372,10 @@ module.exports = class ItemController {
                 });
             }
             const insertItemQuery = `
-                INSERT INTO item (sapCode, name, aliases, brand, description, technicalSpecs, fkIdCategory)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO item (sapCode, name, aliases, brand, description, technicalSpecs, minimumStock, fkIdCategory)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
-            const itemValues = [sapCode, name, aliases, itemData.brand, itemData.description, JSON.stringify(technicalSpecs), fkIdCategory];
+            const itemValues = [sapCode, name, aliases, itemData.brand, itemData.description, JSON.stringify(technicalSpecs), minimumStock, fkIdCategory];
             const itemResult = await queryAsync(insertItemQuery, itemValues);
             const fkIdItem = itemResult.insertId;
             const getLotNumberQuery = `
