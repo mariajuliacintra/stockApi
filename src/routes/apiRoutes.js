@@ -1,15 +1,18 @@
 const router = require("express").Router();
 
-const reportControllerExcel = require("../controllers/reportControllerExcel");
-const reportControllerPdf = require("../controllers/reportControllerPdf");
-
 const userController = require("../controllers/userController");
 
 const itemController = require("../controllers/itemController");
 const lotController = require("../controllers/lotController");
+
 const locationController = require("../controllers/locationController");
 const categoryController = require("../controllers/categoryController");
+const technicalSpecController = require("../controllers/technicalSpecController");
+
 const transactionController = require("../controllers/transactionController");
+
+const reportControllerExcel = require("../controllers/reportControllerExcel");
+const reportControllerPdf = require("../controllers/reportControllerPdf");
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
@@ -28,6 +31,7 @@ router.post("/user/recovery-password", userController.recoveryPassword);
 
 // Rotas para buscar informações de itens
 router.get("/items", verifyJWT, itemController.getAllItems);
+router.get("/item/:idItem/details", verifyJWT, itemController.getItemByIdDetails);
 router.get("/items/details", verifyJWT, itemController.getAllItemsDetails);
 router.get("/items/category/:idCategory", verifyJWT, itemController.getItemsByCategoryId);
 router.get("/items/category/:idCategory/details", verifyJWT, itemController.getItemsByCategoryDetailsId);
@@ -64,6 +68,12 @@ router.get("/category/:idCategory", verifyJWT, categoryController.getCategoryByI
 router.post("/category", verifyJWT, authorizeManager, categoryController.createCategory);
 router.put("/category/:idCategory", verifyJWT, authorizeManager, categoryController.updateCategory);
 router.delete("/category/:idCategory", verifyJWT, authorizeManager, categoryController.deleteCategory);
+
+router.get("/technicalSpec", verifyJWT, technicalSpecController.getTechnicalSpecs);
+router.get("/technicalSpec/:idTechnicalSpec", verifyJWT, technicalSpecController.getTechnicalSpecById);
+router.post("/technicalSpec", verifyJWT, authorizeManager, technicalSpecController.createTechnicalSpec);
+router.put("/technicalSpec/:idTechnicalSpec", verifyJWT, authorizeManager, technicalSpecController.updateTechnicalSpec);
+router.delete("/technicalSpec/:idTechnicalSpec", verifyJWT, authorizeManager, technicalSpecController.deleteTechnicalSpec);
 
 router.get("/report/pdf/general",verifyJWT, authorizeManager, reportControllerPdf.generateGeneralReport);
 router.get("/report/pdf/low-stock", verifyJWT, authorizeManager, reportControllerPdf.generateLowStockReport);
