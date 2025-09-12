@@ -46,8 +46,7 @@ router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemControl
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
 
 // Novas rotas para a gestão de imagens de itens
-router.post("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.createImage);
-router.put("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.updateImage);
+router.post("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.insertImage);
 router.delete("/item/image/:idItem", verifyJWT, authorizeManager, itemController.deleteImage);
 
 // Rotas para a criação e gerenciamento de lotes
