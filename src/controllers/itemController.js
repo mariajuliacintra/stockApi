@@ -117,26 +117,52 @@ module.exports = class ItemController {
         }
     }
 
-    static async getAllItems(req, res) {
-        try {
-            const query = `
-                SELECT
-                    i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
-                    JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
-                    i.sapCode,
-                    SUM(l.quantity) as totalQuantity
-                FROM item i
-                JOIN category c ON i.fkIdCategory = c.idCategory
-                LEFT JOIN lots l ON i.idItem = l.fkIdItem
-                GROUP BY i.idItem
-            `;
-            const items = await queryAsync(query);
-            return handleResponse(res, 200, items);
-        } catch (error) {
-            console.error("Erro ao buscar e agrupar itens:", error);
-            return handleResponse(res, 500, { error: "Erro interno do servidor" });
-        }
+static async getAllItems(req, res) {
+    try {
+        const query = `
+            SELECT
+                i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock,
+                JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
+                i.sapCode,
+                SUM(l.quantity) as totalQuantity,
+                i.technicalSpecs
+            FROM item i
+            JOIN category c ON i.fkIdCategory = c.idCategory
+            LEFT JOIN lots l ON i.idItem = l.fkIdItem
+            GROUP BY i.idItem
+        `;
+        const items = await queryAsync(query);
+
+        const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
+        const keysMap = technicalSpecKeys.reduce((acc, spec) => {
+            acc[spec.idTechnicalSpec] = spec.technicalSpecKey;
+            return acc;
+        }, {});
+
+        // Formata as especificações técnicas para cada item
+        const formattedItems = items.map(item => {
+            if (!item.technicalSpecs) {
+                return { ...item, technicalSpecs: [] };
+            }
+
+            const specsArray = Object.entries(item.technicalSpecs).map(([id, value]) => ({
+                idTechnicalSpec: parseInt(id),
+                technicalSpecKey: keysMap[id] || null,
+                technicalSpecValue: value,
+            }));
+
+            return {
+                ...item,
+                technicalSpecs: specsArray
+            };
+        });
+
+        return handleResponse(res, 200, formattedItems);
+    } catch (error) {
+        console.error("Erro ao buscar e agrupar itens:", error);
+        return handleResponse(res, 500, { error: "Erro interno do servidor" });
     }
+}
 
     static async getAllItemsDetails(req, res) {
         try {
@@ -224,6 +250,78 @@ module.exports = class ItemController {
             return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
         }
     }
+
+static async filterItems(req, res) {
+    try {
+        const { name, idCategory } = req.body;
+
+        const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
+        const keysMap = technicalSpecKeys.reduce((acc, spec) => {
+            acc[spec.idTechnicalSpec] = spec.technicalSpecKey;
+            return acc;
+        }, {});
+
+        let query = `
+            SELECT
+                i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock,
+                JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
+                i.sapCode,
+                SUM(l.quantity) as totalQuantity,
+                i.technicalSpecs
+            FROM item i
+            JOIN category c ON i.fkIdCategory = c.idCategory
+            LEFT JOIN lots l ON i.idItem = l.fkIdItem
+            WHERE 1=1
+        `;
+        const queryParams = [];
+
+        // Filtro por nome (name ou aliases)
+        if (name) {
+            const normalizedName = name.trim();
+            query += `
+                AND (
+                    REPLACE(LOWER(i.name), ' ', '') LIKE ? OR
+                    REPLACE(LOWER(i.aliases), ' ', '') LIKE ?
+                )
+            `;
+            queryParams.push(`%${normalizedName.toLowerCase().replace(/\s/g, '')}%`, `%${normalizedName.toLowerCase().replace(/\s/g, '')}%`);
+        }
+
+        // Filtro por idCategory (aceita múltiplos IDs)
+        if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
+            const placeholders = idCategory.map(() => '?').join(',');
+            query += ` AND i.fkIdCategory IN (${placeholders})`;
+            queryParams.push(...idCategory);
+        }
+
+        query += ` GROUP BY i.idItem ORDER BY i.name`;
+
+        const items = await queryAsync(query, queryParams);
+
+        // Formata as especificações técnicas para cada item
+        const formattedItems = items.map(item => {
+            if (!item.technicalSpecs) {
+                return { ...item, technicalSpecs: [] };
+            }
+
+            const specsArray = Object.entries(item.technicalSpecs).map(([id, value]) => ({
+                idTechnicalSpec: parseInt(id),
+                technicalSpecKey: keysMap[id] || null,
+                technicalSpecValue: value,
+            }));
+
+            return {
+                ...item,
+                technicalSpecs: specsArray
+            };
+        });
+
+        return handleResponse(res, 200, formattedItems);
+    } catch (error) {
+        console.error("Erro ao filtrar itens:", error);
+        return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+    }
+}
 
     static async createItem(req, res) {
         const {

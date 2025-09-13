@@ -87,6 +87,3 @@ cron.schedule("0 0 * * 1", async () => {
   await checkExpirationDates();
   await checkMinimumStock();
 });
-
-checkExpirationDates();
-checkMinimumStock();
