@@ -23,6 +23,7 @@ router.post("/user/verify-register", userController.verifyUser);
 router.post("/user/login", userController.loginUser);
 router.put("/user/:idUser", verifyJWT, userController.updateUser);
 router.post("/user/verify-update", userController.verifyUpdate);
+router.post("/user/validate-password/:idUser", verifyJWT, userController.validatePassword);
 router.delete("/user/:idUser", verifyJWT, userController.deleteUser);
 router.get("/users", verifyJWT, authorizeManager, userController.getAllUsers);
 router.post("/user/verify-recovery-password", userController.verifyRecoveryPassword);

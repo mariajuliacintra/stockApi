@@ -407,4 +407,30 @@ module.exports = class UserController {
             return handleResponse(res, 500, { error: "Erro Interno do Servidor" });
         }
     }
+    static async validatePassword(req, res) {
+        const { idUser } = req.params;
+        const { password } = req.body; // A senha atual enviada do app
+    
+        // Se a senha não foi fornecida, retorne um erro.
+        if (!password) {
+            return handleResponse(res, 400, { error: "Senha é obrigatória." });
+        }
+    
+        try {
+            const user = await findUserById(idUser);
+            if (!user) {
+                return handleResponse(res, 404, { error: "Usuário não encontrado." });
+            }
+    
+            const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
+    
+            return handleResponse(res, 200, {
+                message: "Validação de senha concluída.",
+                isValid: passwordOK, // Retorna true ou false
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor." });
+        }
+    }
 };
