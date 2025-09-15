@@ -200,6 +200,7 @@ module.exports = class UserController {
                 return handleResponse(res, 404, { error: "Usuário não encontrado", auth: false });
             }
 
+            // Cenário 1: O e-mail foi alterado.
             if (email && email !== userToUpdate.email) {
                 const emailValidationError = await validateUser.validateEmail(email);
                 if (emailValidationError && emailValidationError.error) {
@@ -225,12 +226,15 @@ module.exports = class UserController {
                     expiresAt: Date.now() + 5 * 60 * 1000,
                 };
 
+                // AQUI, a API retorna uma flag para o cliente informando que uma verificação é necessária
                 return handleResponse(res, 200, {
                     message: "Verificação de e-mail necessária. Um código foi enviado para o novo e-mail.",
+                    requiresEmailVerification: true, // << NOVO!
                     auth: true,
                 });
             }
 
+            // Cenário 2: O e-mail NÃO foi alterado (apenas nome ou senha).
             const fieldsToUpdate = [];
             const values = [];
 
@@ -257,9 +261,45 @@ module.exports = class UserController {
             const updatedUser = await findUserById(idUser);
             await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
 
+            // AQUI, a API retorna o objeto de usuário, pois a atualização é final.
             return handleResponse(res, 200, {
                 message: "Usuário atualizado com sucesso.",
-                user: updatedUser,
+                user: updatedUser, // << AQUI!
+                auth: true,
+            });
+
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+        }
+    }
+
+    static async verifyUpdate(req, res) {
+        const { email, code } = req.body;
+
+        if (!email || !code) {
+            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios.", auth: false });
+        }
+
+        const storedUpdate = tempUsers[email];
+
+        if (!storedUpdate || storedUpdate.verificationCode !== code || Date.now() > storedUpdate.expiresAt) {
+            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
+        }
+
+        try {
+            const { idUser, name, newEmail, hashedPassword } = storedUpdate;
+            const updateQuery = `UPDATE user SET name = ?, email = ?, hashedPassword = ? WHERE idUser = ?`;
+            await queryAsync(updateQuery, [name, newEmail, hashedPassword, idUser]);
+
+            const updatedUser = await findUserById(idUser);
+            delete tempUsers[email];
+            await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
+
+            // AQUI, a API retorna o objeto de usuário após a verificação
+            return handleResponse(res, 200, {
+                message: "Usuário atualizado com sucesso.",
+                user: updatedUser, // << AQUI!
                 auth: true,
             });
         } catch (error) {
@@ -267,6 +307,7 @@ module.exports = class UserController {
             return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
         }
     }
+
 
     static async verifyUpdate(req, res) {
         const { email, code } = req.body;
