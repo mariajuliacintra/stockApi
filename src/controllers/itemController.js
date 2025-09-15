@@ -6,19 +6,19 @@ module.exports = class ItemController {
     static async checkItemBySapCode(req, res) {
         const { sapCode } = req.params;
         if (isNaN(Number(sapCode))) {
-            return handleResponse(res, 400, { message: "O código SAP deve ser um valor numérico." });
+            return handleResponse(res, 400, { success: false, error: "O código SAP deve ser um valor numérico." });
         }
         try {
             const query = "SELECT sapCode FROM item WHERE sapCode = ?";
             const item = await queryAsync(query, [sapCode]);
             if (item.length > 0) {
-                return handleResponse(res, 200, { exists: true, message: "Item encontrado." });
+                return handleResponse(res, 200, { success: true, message: "Item encontrado.", data: { exists: true } });
             } else {
-                return handleResponse(res, 404, { exists: false, message: "Item não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado.", details: "Não existe um item com o código SAP fornecido." });
             }
         } catch (error) {
             console.error("Erro ao verificar item:", error);
-            return handleResponse(res, 500, { error: "Erro interno do servidor" });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -26,7 +26,7 @@ module.exports = class ItemController {
         const { idItem } = req.params;
 
         if (isNaN(Number(idItem))) {
-            return handleResponse(res, 400, { message: "O ID do item deve ser um valor numérico." });
+            return handleResponse(res, 400, { success: false, error: "O ID do item deve ser um valor numérico." });
         }
 
         try {
@@ -58,7 +58,7 @@ module.exports = class ItemController {
             const items = await queryAsync(query, [idItem]);
 
             if (items.length === 0) {
-                return handleResponse(res, 404, { message: "Item não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado.", details: "O item com o ID fornecido não existe." });
             }
 
             const item = items[0];
@@ -109,60 +109,59 @@ module.exports = class ItemController {
             delete finalItem.imageData;
             delete finalItem.imageType;
             
-            return handleResponse(res, 200, finalItem);
+            return handleResponse(res, 200, { success: true, message: "Detalhes do item obtidos com sucesso.", data: finalItem, arrayName: "item" });
 
         } catch (error) {
             console.error("Erro ao buscar item por ID com detalhes:", error);
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
-static async getAllItems(req, res) {
-    try {
-        const query = `
-            SELECT
-                i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock,
-                JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
-                i.sapCode,
-                SUM(l.quantity) as totalQuantity,
-                i.technicalSpecs
-            FROM item i
-            JOIN category c ON i.fkIdCategory = c.idCategory
-            LEFT JOIN lots l ON i.idItem = l.fkIdItem
-            GROUP BY i.idItem
-        `;
-        const items = await queryAsync(query);
+    static async getAllItems(req, res) {
+        try {
+            const query = `
+                SELECT
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock,
+                    JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
+                    i.sapCode,
+                    SUM(l.quantity) as totalQuantity,
+                    i.technicalSpecs
+                FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
+                LEFT JOIN lots l ON i.idItem = l.fkIdItem
+                GROUP BY i.idItem
+            `;
+            const items = await queryAsync(query);
 
-        const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
-        const keysMap = technicalSpecKeys.reduce((acc, spec) => {
-            acc[spec.idTechnicalSpec] = spec.technicalSpecKey;
-            return acc;
-        }, {});
+            const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
+            const keysMap = technicalSpecKeys.reduce((acc, spec) => {
+                acc[spec.idTechnicalSpec] = spec.technicalSpecKey;
+                return acc;
+            }, {});
 
-        // Formata as especificações técnicas para cada item
-        const formattedItems = items.map(item => {
-            if (!item.technicalSpecs) {
-                return { ...item, technicalSpecs: [] };
-            }
+            const formattedItems = items.map(item => {
+                if (!item.technicalSpecs) {
+                    return { ...item, technicalSpecs: [] };
+                }
 
-            const specsArray = Object.entries(item.technicalSpecs).map(([id, value]) => ({
-                idTechnicalSpec: parseInt(id),
-                technicalSpecKey: keysMap[id] || null,
-                technicalSpecValue: value,
-            }));
+                const specsArray = Object.entries(item.technicalSpecs).map(([id, value]) => ({
+                    idTechnicalSpec: parseInt(id),
+                    technicalSpecKey: keysMap[id] || null,
+                    technicalSpecValue: value,
+                }));
 
-            return {
-                ...item,
-                technicalSpecs: specsArray
-            };
-        });
+                return {
+                    ...item,
+                    technicalSpecs: specsArray
+                };
+            });
 
-        return handleResponse(res, 200, formattedItems);
-    } catch (error) {
-        console.error("Erro ao buscar e agrupar itens:", error);
-        return handleResponse(res, 500, { error: "Erro interno do servidor" });
+            return handleResponse(res, 200, { success: true, message: "Lista de itens obtida com sucesso.", data: formattedItems, arrayName: "items" });
+        } catch (error) {
+            console.error("Erro ao buscar e agrupar itens:", error);
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
+        }
     }
-}
 
     static async getAllItemsDetails(req, res) {
         try {
@@ -243,85 +242,82 @@ static async getAllItems(req, res) {
                 return newItem;
             });
 
-            return handleResponse(res, 200, finalItems);
+            return handleResponse(res, 200, { success: true, message: "Lista de itens com detalhes obtida com sucesso.", data: finalItems, arrayName: "items" });
 
         } catch (error) {
             console.error("Erro ao buscar itens com detalhes:", error);
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
-static async filterItems(req, res) {
-    try {
-        const { name, idCategory } = req.body;
+    static async filterItems(req, res) {
+        try {
+            const { name, idCategory } = req.body;
 
-        const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
-        const keysMap = technicalSpecKeys.reduce((acc, spec) => {
-            acc[spec.idTechnicalSpec] = spec.technicalSpecKey;
-            return acc;
-        }, {});
+            const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
+            const keysMap = technicalSpecKeys.reduce((acc, spec) => {
+                acc[spec.idTechnicalSpec] = spec.technicalSpecKey;
+                return acc;
+            }, {});
 
-        let query = `
-            SELECT
-                i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock,
-                JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
-                i.sapCode,
-                SUM(l.quantity) as totalQuantity,
-                i.technicalSpecs
-            FROM item i
-            JOIN category c ON i.fkIdCategory = c.idCategory
-            LEFT JOIN lots l ON i.idItem = l.fkIdItem
-            WHERE 1=1
-        `;
-        const queryParams = [];
-
-        // Filtro por nome (name ou aliases)
-        if (name) {
-            const normalizedName = name.trim();
-            query += `
-                AND (
-                    REPLACE(LOWER(i.name), ' ', '') LIKE ? OR
-                    REPLACE(LOWER(i.aliases), ' ', '') LIKE ?
-                )
+            let query = `
+                SELECT
+                    i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock,
+                    JSON_OBJECT('idCategory', c.idCategory, 'value', c.categoryValue) AS category,
+                    i.sapCode,
+                    SUM(l.quantity) as totalQuantity,
+                    i.technicalSpecs
+                FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
+                LEFT JOIN lots l ON i.idItem = l.fkIdItem
+                WHERE 1=1
             `;
-            queryParams.push(`%${normalizedName.toLowerCase().replace(/\s/g, '')}%`, `%${normalizedName.toLowerCase().replace(/\s/g, '')}%`);
-        }
+            const queryParams = [];
 
-        // Filtro por idCategory (aceita múltiplos IDs)
-        if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
-            const placeholders = idCategory.map(() => '?').join(',');
-            query += ` AND i.fkIdCategory IN (${placeholders})`;
-            queryParams.push(...idCategory);
-        }
-
-        query += ` GROUP BY i.idItem ORDER BY i.name`;
-
-        const items = await queryAsync(query, queryParams);
-
-        // Formata as especificações técnicas para cada item
-        const formattedItems = items.map(item => {
-            if (!item.technicalSpecs) {
-                return { ...item, technicalSpecs: [] };
+            if (name) {
+                const normalizedName = name.trim();
+                query += `
+                    AND (
+                        REPLACE(LOWER(i.name), ' ', '') LIKE ? OR
+                        REPLACE(LOWER(i.aliases), ' ', '') LIKE ?
+                    )
+                `;
+                queryParams.push(`%${normalizedName.toLowerCase().replace(/\s/g, '')}%`, `%${normalizedName.toLowerCase().replace(/\s/g, '')}%`);
             }
 
-            const specsArray = Object.entries(item.technicalSpecs).map(([id, value]) => ({
-                idTechnicalSpec: parseInt(id),
-                technicalSpecKey: keysMap[id] || null,
-                technicalSpecValue: value,
-            }));
+            if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
+                const placeholders = idCategory.map(() => '?').join(',');
+                query += ` AND i.fkIdCategory IN (${placeholders})`;
+                queryParams.push(...idCategory);
+            }
 
-            return {
-                ...item,
-                technicalSpecs: specsArray
-            };
-        });
+            query += ` GROUP BY i.idItem ORDER BY i.name`;
 
-        return handleResponse(res, 200, formattedItems);
-    } catch (error) {
-        console.error("Erro ao filtrar itens:", error);
-        return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            const items = await queryAsync(query, queryParams);
+
+            const formattedItems = items.map(item => {
+                if (!item.technicalSpecs) {
+                    return { ...item, technicalSpecs: [] };
+                }
+
+                const specsArray = Object.entries(item.technicalSpecs).map(([id, value]) => ({
+                    idTechnicalSpec: parseInt(id),
+                    technicalSpecKey: keysMap[id] || null,
+                    technicalSpecValue: value,
+                }));
+
+                return {
+                    ...item,
+                    technicalSpecs: specsArray
+                };
+            });
+
+            return handleResponse(res, 200, { success: true, message: "Itens filtrados com sucesso.", data: formattedItems, arrayName: "items" });
+        } catch (error) {
+            console.error("Erro ao filtrar itens:", error);
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
+        }
     }
-}
 
     static async createItem(req, res) {
         const {
@@ -339,8 +335,7 @@ static async filterItems(req, res) {
         } = req.body;
         const validationResult = await validateItem.validateCreateItem(req.body);
         if (!validationResult || !validationResult.isValid) {
-            const errorMessage = validationResult ? validationResult.message : "Erro desconhecido na validação.";
-            return handleResponse(res, 400, { message: errorMessage });
+            return handleResponse(res, 400, { success: false, error: "Erro de validação.", details: validationResult.message });
         }
         try {
             await queryAsync("START TRANSACTION");
@@ -349,7 +344,9 @@ static async filterItems(req, res) {
             if (existingItemResult) {
                 await queryAsync("ROLLBACK");
                 return handleResponse(res, 409, {
-                    message: `Item com sapCode '${sapCode}' já existe. Para adicionar um novo lote, use o endpoint apropriado.`,
+                    success: false,
+                    error: `Item com sapCode '${sapCode}' já existe.`,
+                    details: "Para adicionar um novo lote, use o endpoint apropriado.",
                     existingItemId: existingItemResult.idItem,
                     existingItemName: existingItemResult.name
                 });
@@ -382,11 +379,17 @@ static async filterItems(req, res) {
             const transactionValues = [fkIdUser, newLotId, 'IN', quantity, 0, quantity];
             await queryAsync(insertTransactionQuery, transactionValues);
             await queryAsync("COMMIT");
-            return handleResponse(res, 201, { message: "Item e lote criados com sucesso!", itemId: fkIdItem, sapCode: sapCode, lotNumber: lotNumber, lotId: newLotId });
+            return handleResponse(res, 201, {
+                success: true,
+                message: "Item e lote criados com sucesso!",
+                details: "O item e seu primeiro lote foram adicionados ao estoque.",
+                data: { itemId: fkIdItem, sapCode: sapCode, lotNumber: lotNumber, lotId: newLotId },
+                arrayName: "data"
+            });
         } catch (error) {
             console.error("Erro ao criar item:", error);
             await queryAsync("ROLLBACK");
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -394,13 +397,13 @@ static async filterItems(req, res) {
         const { idItem } = req.params;
         const { quantity: rawQuantity, isAjust, fkIdUser } = req.body;
         if (idItem === undefined || isNaN(Number(idItem))) {
-            return handleResponse(res, 400, { message: "O ID do item é obrigatório e deve ser um número." });
+            return handleResponse(res, 400, { success: false, error: "O ID do item é obrigatório e deve ser um número." });
         }
         if (fkIdUser === undefined || isNaN(Number(fkIdUser))) {
-            return handleResponse(res, 400, { message: "O ID do usuário é obrigatório e deve ser um número." });
+            return handleResponse(res, 400, { success: false, error: "O ID do usuário é obrigatório e deve ser um número." });
         }
         if (typeof isAjust !== 'boolean') {
-            return handleResponse(res, 400, { message: "O campo 'isAjust' deve ser um booleano (true ou false)." });
+            return handleResponse(res, 400, { success: false, error: "O campo 'isAjust' deve ser um booleano (true ou false)." });
         }
         let quantityNum;
         let actionDescription;
@@ -408,7 +411,7 @@ static async filterItems(req, res) {
         try {
             quantityNum = parseFloat(rawQuantity);
             if (isNaN(quantityNum)) {
-                return handleResponse(res, 400, { message: "A quantidade é obrigatória e deve ser um número válido." });
+                return handleResponse(res, 400, { success: false, error: "A quantidade é obrigatória e deve ser um número válido." });
             }
             await queryAsync("START TRANSACTION");
             const countLotsQuery = "SELECT COUNT(*) AS lotCount FROM lots WHERE fkIdItem = ?";
@@ -419,7 +422,7 @@ static async filterItems(req, res) {
                 const message = lotCount === 0 ?
                     "Item não encontrado ou não possui lotes." :
                     "Este item possui mais de um lote. Esta operação é apenas para itens com um único lote.";
-                return handleResponse(res, 404, { message });
+                return handleResponse(res, 404, { success: false, error: message, details: "A operação de atualização de lote único falhou." });
             }
             const getLotInfoQuery = "SELECT idLot, quantity AS currentQuantity FROM lots WHERE fkIdItem = ?";
             const [lotInfo] = await queryAsync(getLotInfoQuery, [idItem]);
@@ -443,7 +446,7 @@ static async filterItems(req, res) {
                 }
                 if (newQuantity < 0) {
                     await queryAsync("ROLLBACK");
-                    return handleResponse(res, 400, { message: "A remoção de quantidade resultaria em um estoque negativo." });
+                    return handleResponse(res, 400, { success: false, error: "A remoção de quantidade resultaria em um estoque negativo." });
                 }
             }
             newQuantity = parseFloat(newQuantity.toFixed(4));
@@ -456,11 +459,17 @@ static async filterItems(req, res) {
             `;
             await queryAsync(insertTransactionQuery, [fkIdUser, idLot, actionDescription, quantityChange, currentQuantity, newQuantity]);
             await queryAsync("COMMIT");
-            return handleResponse(res, 200, { message: "Quantidade do lote atualizada com sucesso!", idLot, newQuantity });
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Quantidade do lote atualizada com sucesso!",
+                details: `A nova quantidade é ${newQuantity}.`,
+                data: { idLot, newQuantity },
+                arrayName: "data"
+            });
         } catch (error) {
             console.error("Erro ao atualizar quantidade do lote único:", error);
             await queryAsync("ROLLBACK");
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -469,8 +478,7 @@ static async filterItems(req, res) {
         const data = req.body;
         const validationResult = validateItem.validateUpdateInformation(req.body);
         if (!validationResult || !validationResult.isValid) {
-            const errorMessage = validationResult ? validationResult.message : "Erro desconhecido na validação.";
-            return handleResponse(res, 400, { message: errorMessage });
+            return handleResponse(res, 400, { success: false, error: "Erro de validação.", details: validationResult.message });
         }
         const { sapCode: newSapCode, fkIdCategory, technicalSpecs, ...otherData } = data;
         try {
@@ -479,14 +487,14 @@ static async filterItems(req, res) {
             const [existingItem] = await queryAsync(findItemQuery, [idItem]);
             if (!existingItem) {
                 await queryAsync("ROLLBACK");
-                return handleResponse(res, 404, { message: "Item não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado." });
             }
             if (newSapCode && newSapCode !== existingItem.sapCode) {
                 const checkSapCodeQuery = "SELECT idItem FROM item WHERE sapCode = ?";
                 const [itemWithNewSapCode] = await queryAsync(checkSapCodeQuery, [newSapCode]);
                 if (itemWithNewSapCode) {
                     await queryAsync("ROLLBACK");
-                    return handleResponse(res, 409, { message: "Novo sapCode já está em uso por outro item." });
+                    return handleResponse(res, 409, { success: false, error: "Novo sapCode já está em uso por outro item." });
                 }
             }
             const fieldsToUpdate = Object.keys(otherData);
@@ -504,7 +512,7 @@ static async filterItems(req, res) {
             }
             if (fieldsToUpdate.length === 0) {
                 await queryAsync("ROLLBACK");
-                return handleResponse(res, 400, { message: "Nenhum campo para atualização de informações do item foi fornecido." });
+                return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualização de informações do item foi fornecido." });
             }
             const updateQueryParts = fieldsToUpdate.map(key => `${key} = ?`);
             const updateQuery = `UPDATE item SET ${updateQueryParts.join(', ')} WHERE idItem = ?`;
@@ -513,86 +521,84 @@ static async filterItems(req, res) {
             const updateResult = await queryAsync(updateQuery, updateValues);
             if (updateResult.affectedRows === 0) {
                 await queryAsync("ROLLBACK");
-                return handleResponse(res, 404, { message: "Item não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado." });
             }
             await queryAsync("COMMIT");
-            return handleResponse(res, 200, { message: "Informações do item atualizadas com sucesso!" });
+            return handleResponse(res, 200, { success: true, message: "Informações do item atualizadas com sucesso!", details: "As informações do item foram salvas." });
         } catch (error) {
             console.error("Erro ao atualizar informações do item:", error);
             await queryAsync("ROLLBACK");
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
-static async insertImage(req, res) {
-    const { idItem } = req.params;
-    const imageFile = req.file;
+    static async insertImage(req, res) {
+        const { idItem } = req.params;
+        const imageFile = req.file;
 
-    if (!imageFile) {
-        return handleResponse(res, 400, { message: "Nenhuma imagem foi enviada." });
-    }
+        if (!imageFile) {
+            return handleResponse(res, 400, { success: false, error: "Nenhuma imagem foi enviada." });
+        }
 
-    try {
-        const [item] = await queryAsync("SELECT fkIdImage FROM item WHERE idItem = ?", [idItem]);
+        try {
+            const [item] = await queryAsync("SELECT fkIdImage FROM item WHERE idItem = ?", [idItem]);
 
-        if (!item) {
+            if (!item) {
+                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado." });
+            }
+
+            const imageData = await fs.readFile(imageFile.path);
+            const imageType = imageFile.mimetype;
+
+            let message;
+            let statusCode;
+            let fkIdImage;
+
+            if (item.fkIdImage) {
+                await queryAsync("UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?", [imageData, imageType, item.fkIdImage]);
+                fkIdImage = item.fkIdImage;
+                message = "Imagem do item atualizada com sucesso!";
+                statusCode = 200;
+            } else {
+                const imageResult = await queryAsync("INSERT INTO image (imageData, imageType) VALUES (?, ?)", [imageData, imageType]);
+                fkIdImage = imageResult.insertId;
+                await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [fkIdImage, idItem]);
+                message = "Imagem adicionada com sucesso ao item!";
+                statusCode = 201;
+            }
+
             await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-            return handleResponse(res, 404, { message: "Item não encontrado." });
+            return handleResponse(res, statusCode, { success: true, message, data: { fkIdImage }, arrayName: "data" });
+
+        } catch (error) {
+            console.error("Erro ao inserir/atualizar imagem do item:", error);
+            if (imageFile) {
+                await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
+            }
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
-
-        const imageData = await fs.readFile(imageFile.path);
-        const imageType = imageFile.mimetype;
-
-        let message;
-        let statusCode;
-        let fkIdImage;
-
-        if (item.fkIdImage) {
-            // Atualizar a imagem existente
-            await queryAsync("UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?", [imageData, imageType, item.fkIdImage]);
-            fkIdImage = item.fkIdImage;
-            message = "Imagem do item atualizada com sucesso!";
-            statusCode = 200;
-        } else {
-            // Inserir uma nova imagem
-            const imageResult = await queryAsync("INSERT INTO image (imageData, imageType) VALUES (?, ?)", [imageData, imageType]);
-            fkIdImage = imageResult.insertId;
-            await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [fkIdImage, idItem]);
-            message = "Imagem adicionada com sucesso ao item!";
-            statusCode = 201;
-        }
-
-        await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-        return handleResponse(res, statusCode, { message, fkIdImage });
-
-    } catch (error) {
-        console.error("Erro ao inserir/atualizar imagem do item:", error);
-        if (imageFile) {
-            await fs.unlink(imageFile.path).catch(err => console.error("Erro ao remover arquivo temporário:", err));
-        }
-        return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
     }
-}
 
     static async deleteImage(req, res) {
         const { idItem } = req.params;
         try {
             const [item] = await queryAsync("SELECT fkIdImage FROM item WHERE idItem = ?", [idItem]);
             if (!item) {
-                return handleResponse(res, 404, { message: "Item não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado." });
             }
             if (!item.fkIdImage) {
-                return handleResponse(res, 404, { message: "Este item não possui uma imagem para ser excluída." });
+                return handleResponse(res, 404, { success: false, error: "Este item não possui uma imagem para ser excluída." });
             }
             await queryAsync("START TRANSACTION");
             await queryAsync("UPDATE item SET fkIdImage = NULL WHERE idItem = ?", [idItem]);
             await queryAsync("DELETE FROM image WHERE idImage = ?", [item.fkIdImage]);
             await queryAsync("COMMIT");
-            return handleResponse(res, 200, { message: "Imagem do item excluída com sucesso!" });
+            return handleResponse(res, 200, { success: true, message: "Imagem do item excluída com sucesso!" });
         } catch (error) {
             console.error("Erro ao excluir imagem do item:", error);
             await queryAsync("ROLLBACK");
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
@@ -604,7 +610,7 @@ static async insertImage(req, res) {
             const [item] = await queryAsync(getItemQuery, [idItem]);
             if (!item) {
                 await queryAsync("ROLLBACK");
-                return handleResponse(res, 404, { message: "Item não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado." });
             }
             await queryAsync("DELETE FROM transactions WHERE fkIdLot IN (SELECT idLot FROM lots WHERE fkIdItem = ?)", [idItem]);
             await queryAsync("DELETE FROM lots WHERE fkIdItem = ?", [idItem]);
@@ -613,11 +619,11 @@ static async insertImage(req, res) {
                 await queryAsync("DELETE FROM image WHERE idImage = ?", [item.fkIdImage]);
             }
             await queryAsync("COMMIT");
-            return handleResponse(res, 200, { message: "Item e dados associados (lotes, transações e imagem) excluídos com sucesso!" });
+            return handleResponse(res, 200, { success: true, message: "Item e dados associados (lotes, transações e imagem) excluídos com sucesso!" });
         } catch (error) {
             console.error("Erro ao excluir item:", error);
             await queryAsync("ROLLBACK");
-            return handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 };

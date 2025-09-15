@@ -1,11 +1,11 @@
 const jwt = require("jsonwebtoken");
-const { queryAsync } = require("../utils/functions");
+const { queryAsync, handleResponse } = require("../utils/functions");
 
 async function verifyJWT(req, res, next) {
     const token = req.headers["authorization"];
 
     if (!token) {
-        return res.status(401).json({ auth: false, message: "Token não foi fornecido." });
+        return handleResponse(res, 401, { success: false, error: "Token não fornecido", details: "Um token de autenticação é necessário para acessar este recurso." });
     }
 
     try {
@@ -14,7 +14,7 @@ async function verifyJWT(req, res, next) {
         const results = await queryAsync(query, [decoded.idUser]);
 
         if (results.length === 0) {
-            return res.status(403).json({ auth: false, message: "Usuário não encontrado ou inativo." });
+            return handleResponse(res, 403, { success: false, error: "Usuário não encontrado ou inativo", details: "O usuário associado ao token não foi encontrado ou está inativo." });
         }
 
         req.userId = results[0].idUser;
@@ -24,9 +24,9 @@ async function verifyJWT(req, res, next) {
         next();
     } catch (err) {
         if (err.name === 'TokenExpiredError') {
-            return res.status(401).json({ auth: false, message: "Token expirado. Faça o login novamente." });
+            return handleResponse(res, 401, { success: false, error: "Token expirado", details: "Seu token de autenticação expirou. Por favor, faça o login novamente." });
         }
-        return res.status(403).json({ auth: false, message: "Falha na autenticação - Token Inválido." });
+        return handleResponse(res, 403, { success: false, error: "Autenticação falhou", details: "O token fornecido é inválido ou foi corrompido." });
     }
 }
 
