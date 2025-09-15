@@ -1,69 +1,79 @@
 const { queryAsync, handleResponse } = require('../utils/functions');
 
 module.exports = class TransactionController {
-    static async getAllTransactions (req, res) {
+    static async getAllTransactions(req, res) {
         try {
             const query = "SELECT * FROM transactions";
             const transactions = await queryAsync(query);
-            handleResponse(res, 200, transactions);
+            return handleResponse(res, 200, { success: true, message: "Transações obtidas com sucesso.", data: transactions, arrayName: "transactions" });
         } catch (error) {
             console.error("Erro ao buscar transações:", error);
-            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
-    static async getTransactionById (req, res) {
+    static async getTransactionById(req, res) {
         const { idTransaction } = req.params;
         try {
             const query = "SELECT * FROM transactions WHERE idTransaction = ?";
             const transaction = await queryAsync(query, [idTransaction]);
-
             if (transaction.length === 0) {
-                return handleResponse(res, 404, { message: "Transação não encontrada." });
+                return handleResponse(res, 404, { success: false, error: "Transação não encontrada.", details: "O ID da transação fornecido não existe." });
             }
-
-            handleResponse(res, 200, transaction[0]);
+            return handleResponse(res, 200, { success: true, message: "Transação obtida com sucesso.", data: transaction[0], arrayName: "transaction" });
         } catch (error) {
             console.error("Erro ao buscar transação por ID:", error);
-            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
-    static async addTransaction (req, res) {
+    static async addTransaction(req, res) {
         const { fkIdUser, fkIdItem, actionDescription, quantityChange } = req.body;
         try {
-            if (!fkIdUser || !fkIdItem || !actionDescription || quantityChange === undefined || isNaN(quantityChange) || quantityChange <= 0) {
-                return handleResponse(res, 400, { message: "Campos obrigatórios inválidos ou ausentes." });
+            if (fkIdUser === undefined || fkIdItem === undefined || !actionDescription || quantityChange === undefined || isNaN(parseFloat(quantityChange))) {
+                return handleResponse(res, 400, { success: false, error: "Campos obrigatórios ausentes ou inválidos", details: "Os campos 'fkIdUser', 'fkIdItem', 'actionDescription' e 'quantityChange' são obrigatórios e devem ser válidos." });
+            }
+            const numericQuantityChange = parseFloat(quantityChange);
+            if (numericQuantityChange <= 0 && actionDescription !== 'AJUST') { // Permitir quantityChange zero ou negativo apenas para AJUST
+                return handleResponse(res, 400, { success: false, error: "Quantidade inválida", details: "O 'quantityChange' deve ser um número positivo para ações 'IN' e 'OUT'." });
             }
 
-            const userQuery = "SELECT COUNT(*) AS count FROM user WHERE idUser = ?";
-            const itemQuery = "SELECT * FROM item WHERE idItem = ?";
+            const userQuery = "SELECT 1 FROM user WHERE idUser = ?";
+            const itemQuery = "SELECT quantity FROM item WHERE idItem = ?";
 
-            const userResult = await queryAsync(userQuery, [fkIdUser]);
-            const itemResult = await queryAsync(itemQuery, [fkIdItem]);
-
-            if (userResult[0].count === 0) {
-                return handleResponse(res, 404, { message: "Usuário não encontrado." });
+            const userExists = await queryAsync(userQuery, [fkIdUser]);
+            if (userExists.length === 0) {
+                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado.", details: "O ID do usuário fornecido não existe." });
             }
 
-            if (itemResult.length === 0) {
-                return handleResponse(res, 404, { message: "Item não encontrado." });
+            const item = await queryAsync(itemQuery, [fkIdItem]);
+            if (item.length === 0) {
+                return handleResponse(res, 404, { success: false, error: "Item não encontrado.", details: "O ID do item fornecido não existe." });
             }
 
-            const oldQuantity = itemResult[0].quantity;
+            const oldQuantity = parseFloat(item[0].quantity);
             let newQuantity;
+            let adjustedQuantityChange = numericQuantityChange;
 
-            if (actionDescription === 'IN') {
-                newQuantity = parseFloat(oldQuantity) + parseFloat(quantityChange);
-            } else if (actionDescription === 'OUT') {
-                if (parseFloat(oldQuantity) < parseFloat(quantityChange)) {
-                    return handleResponse(res, 400, { message: "Quantidade insuficiente em estoque." });
-                }
-                newQuantity = parseFloat(oldQuantity) - parseFloat(quantityChange);
-            } else if (actionDescription === 'AJUST') {
-                newQuantity = parseFloat(oldQuantity) + parseFloat(quantityChange);
-            } else {
-                return handleResponse(res, 400, { message: "Ação inválida. Use 'IN', 'OUT' ou 'AJUST'." });
+            switch (actionDescription) {
+                case 'IN':
+                    newQuantity = oldQuantity + numericQuantityChange;
+                    break;
+                case 'OUT':
+                    if (oldQuantity < numericQuantityChange) {
+                        return handleResponse(res, 400, { success: false, error: "Quantidade insuficiente em estoque.", details: "A quantidade a ser retirada excede a quantidade atual em estoque." });
+                    }
+                    newQuantity = oldQuantity - numericQuantityChange;
+                    break;
+                case 'AJUST':
+                    newQuantity = oldQuantity + numericQuantityChange; // AJUST pode ser positivo ou negativo
+                    break;
+                default:
+                    return handleResponse(res, 400, { success: false, error: "Ação inválida.", details: "A 'actionDescription' deve ser 'IN', 'OUT' ou 'AJUST'." });
+            }
+
+            if (newQuantity < 0 && actionDescription !== 'AJUST') {
+                return handleResponse(res, 400, { success: false, error: "Quantidade final inválida.", details: "A quantidade resultante do item não pode ser negativa, exceto em ajustes." });
             }
 
             const insertTransactionQuery = "INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity, transactionDate) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
@@ -71,7 +81,7 @@ module.exports = class TransactionController {
 
             await queryAsync("START TRANSACTION");
 
-            const transactionValues = [fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity];
+            const transactionValues = [fkIdUser, fkIdItem, actionDescription, adjustedQuantityChange, oldQuantity, newQuantity];
             await queryAsync(insertTransactionQuery, transactionValues);
 
             const itemValues = [newQuantity, fkIdItem];
@@ -79,46 +89,42 @@ module.exports = class TransactionController {
 
             await queryAsync("COMMIT");
 
-            handleResponse(res, 201, { message: "Transação registrada e item atualizado com sucesso!" });
+            return handleResponse(res, 201, { success: true, message: "Transação registrada e item atualizado com sucesso!", data: { newQuantity }, arrayName: "item" });
 
         } catch (error) {
             await queryAsync("ROLLBACK");
             console.error("Erro ao registrar transação:", error);
-            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
-    static async getTransactionByItem (req, res) {
+    static async getTransactionByItem(req, res) {
         const { fkIdItem } = req.params;
         try {
-            const query = "SELECT * FROM transactions WHERE fkIdItem = ? ORDER BY transactionDate DESC";
+            const query = "SELECT t.*, u.username as userUsername, i.name as itemName FROM transactions t JOIN user u ON t.fkIdUser = u.idUser JOIN item i ON t.fkIdItem = i.idItem WHERE t.fkIdItem = ? ORDER BY t.transactionDate DESC";
             const transactions = await queryAsync(query, [fkIdItem]);
-
             if (transactions.length === 0) {
-                return handleResponse(res, 404, { message: "Nenhuma transação encontrada para este item." });
+                return handleResponse(res, 404, { success: false, error: "Nenhuma transação encontrada.", details: "Não há transações registradas para este item." });
             }
-
-            handleResponse(res, 200, transactions);
+            return handleResponse(res, 200, { success: true, message: "Transações do item obtidas com sucesso.", data: transactions, arrayName: "transactions" });
         } catch (error) {
             console.error("Erro ao buscar transações por item:", error);
-            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 
-    static async getTransactionByUser (req, res) {
+    static async getTransactionByUser(req, res) {
         const { fkIdUser } = req.params;
         try {
-            const query = "SELECT * FROM transactions WHERE fkIdUser = ? ORDER BY transactionDate DESC";
+            const query = "SELECT t.*, u.username as userUsername, i.name as itemName FROM transactions t JOIN user u ON t.fkIdUser = u.idUser JOIN item i ON t.fkIdItem = i.idItem WHERE t.fkIdUser = ? ORDER BY t.transactionDate DESC";
             const transactions = await queryAsync(query, [fkIdUser]);
-
             if (transactions.length === 0) {
-                return handleResponse(res, 404, { message: "Nenhuma transação encontrada para este usuário." });
+                return handleResponse(res, 404, { success: false, error: "Nenhuma transação encontrada.", details: "Não há transações registradas para este usuário." });
             }
-
-            handleResponse(res, 200, transactions);
+            return handleResponse(res, 200, { success: true, message: "Transações do usuário obtidas com sucesso.", data: transactions, arrayName: "transactions" });
         } catch (error) {
             console.error("Erro ao buscar transações por usuário:", error);
-            handleResponse(res, 500, { error: "Erro interno do servidor", details: error.message });
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
 };

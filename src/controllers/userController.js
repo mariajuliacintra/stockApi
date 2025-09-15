@@ -12,7 +12,7 @@ module.exports = class UserController {
 
         const userValidationError = validateUser.validateUser(req.body);
         if (userValidationError) {
-            return handleResponse(res, 400, userValidationError);
+            return handleResponse(res, 400, { success: false, ...userValidationError });
         }
 
         try {
@@ -22,7 +22,7 @@ module.exports = class UserController {
                 const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
 
                 if (!emailSent) {
-                    return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação." });
+                    return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
                 }
 
                 const saltRounds = Number(process.env.SALT_ROUNDS);
@@ -37,21 +37,19 @@ module.exports = class UserController {
                     reactivating: true
                 };
 
-                return handleResponse(res, 200, {
-                    message: "E-mail já cadastrado, mas a conta está inativa. Um código de verificação foi enviado para reativá-la."
-                });
+                return handleResponse(res, 200, { success: true, message: "E-mail já cadastrado, mas a conta está inativa.", details: "Um código de verificação foi enviado para reativá-la." });
             }
 
             const emailValidationError = await validateUser.validateEmail(email);
-            if (emailValidationError && emailValidationError.error) {
-                return handleResponse(res, 400, emailValidationError);
+            if (emailValidationError) {
+                return handleResponse(res, 400, { success: false, ...emailValidationError });
             }
 
             const verificationCode = generateRandomCode();
             const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
 
             if (!emailSent) {
-                return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação." });
+                return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
             }
 
             const saltRounds = Number(process.env.SALT_ROUNDS);
@@ -65,12 +63,10 @@ module.exports = class UserController {
                 expiresAt: Date.now() + 5 * 60 * 1000,
             };
 
-            return handleResponse(res, 200, {
-                message: "Usuário temporariamente cadastrado. Verifique seu e-mail para o código de verificação.",
-            });
+            return handleResponse(res, 200, { success: true, message: "Usuário temporariamente cadastrado.", details: "Verifique seu e-mail para o código de verificação." });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor" });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado. Tente novamente mais tarde." });
         }
     }
 
@@ -78,13 +74,13 @@ module.exports = class UserController {
         const { email, code } = req.body;
 
         if (!email || !code) {
-            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios.", auth: false });
+            return handleResponse(res, 400, { success: false, error: "E-mail e código são obrigatórios.", details: "Os campos 'email' e 'code' não foram fornecidos." });
         }
 
         const storedUser = tempUsers[email];
 
         if (!storedUser || storedUser.verificationCode !== code || Date.now() > storedUser.expiresAt) {
-            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
+            return handleResponse(res, 401, { success: false, error: "Código de verificação inválido ou expirado.", details: "O código fornecido não corresponde ou o tempo de validade expirou." });
         }
 
         try {
@@ -100,10 +96,11 @@ module.exports = class UserController {
                 const isManager = user.role === "manager";
                 
                 return handleResponse(res, 200, {
+                    success: true,
                     message: "Conta reativada com sucesso!",
-                    user: { ...user, isManager },
-                    token,
-                    auth: true
+                    details: "O login foi realizado automaticamente.",
+                    data: { ...user, isManager, token, auth: true },
+                    arrayName: "user"
                 });
             }
 
@@ -114,7 +111,7 @@ module.exports = class UserController {
 
             const user = await findUserByEmail(email);
             if (!user) {
-                return handleResponse(res, 404, { error: "Usuário não encontrado", auth: false });
+                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário não pôde ser localizado após o cadastro." });
             }
 
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
@@ -123,14 +120,15 @@ module.exports = class UserController {
             const isManager = user.role === "manager";
             
             return handleResponse(res, 200, {
+                success: true,
                 message: "Cadastro bem-sucedido",
-                user: { ...user, isManager },
-                token,
-                auth: true,
+                details: "O login foi realizado automaticamente.",
+                data: { ...user, isManager, token, auth: true },
+                arrayName: "user"
             });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a verificação." });
         }
     }
 
@@ -139,19 +137,23 @@ module.exports = class UserController {
 
         const loginValidationError = validateUser.validateLogin(req.body);
         if (loginValidationError) {
-            return handleResponse(res, 400, { ...loginValidationError, auth: false });
+            return handleResponse(res, 400, { success: false, ...loginValidationError });
         }
 
         try {
             const user = await findUserByEmail(email);
 
             if (!user) {
-                return handleResponse(res, 404, { error: "Usuário não encontrado", auth: false });
+                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O e-mail fornecido não está cadastrado em nossa base de dados." });
+            }
+
+            if (!user.isActive) {
+                return handleResponse(res, 403, { success: false, error: "Conta inativa", details: "Sua conta foi desativada. Para reativá-la, tente fazer um novo cadastro." });
             }
 
             const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
             if (!passwordOK) {
-                return handleResponse(res, 401, { error: "Senha Incorreta" });
+                return handleResponse(res, 401, { success: false, error: "Senha Incorreta", details: "A senha fornecida não corresponde à do usuário." });
             }
 
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
@@ -159,14 +161,15 @@ module.exports = class UserController {
             const isManager = user.role === "manager";
 
             return handleResponse(res, 200, {
+                success: true,
                 message: "Login Bem-sucedido",
-                user: { ...user, isManager },
-                token,
-                auth: true,
+                details: "Bem-vindo de volta!",
+                data: { ...user, isManager, token, auth: true },
+                arrayName: "user"
             });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante o login." });
         }
     }
 
@@ -174,10 +177,10 @@ module.exports = class UserController {
         const query = `SELECT idUser, name, email, role, createdAt FROM user WHERE isActive = TRUE`;
         try {
             const results = await queryAsync(query);
-            return handleResponse(res, 200, { message: "Obtendo todos os usuários", users: results, auth: true });
+            return handleResponse(res, 200, { success: true, message: "Obtendo todos os usuários", details: "Lista de usuários ativos retornada com sucesso.", data: results, arrayName: "users" });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema ao buscar a lista de usuários." });
         }
     }
 
@@ -186,32 +189,31 @@ module.exports = class UserController {
         const { name, email, password } = req.body;
 
         if (req.userId != idUser) {
-            return handleResponse(res, 403, { error: "Não autorizado", auth: false });
+            return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar este usuário." });
         }
 
-        const updateValidationError = validateUser.validateUpdate(req.body, idUser);
+        const updateValidationError = validateUser.validateUpdate(req.body);
         if (updateValidationError) {
-            return handleResponse(res, 400, { ...updateValidationError, auth: false });
+            return handleResponse(res, 400, { success: false, ...updateValidationError });
         }
 
         try {
             const userToUpdate = await findUserById(idUser);
             if (!userToUpdate) {
-                return handleResponse(res, 404, { error: "Usuário não encontrado", auth: false });
+                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário que você está tentando atualizar não existe." });
             }
 
-            // Cenário 1: O e-mail foi alterado.
             if (email && email !== userToUpdate.email) {
                 const emailValidationError = await validateUser.validateEmail(email);
-                if (emailValidationError && emailValidationError.error) {
-                    return handleResponse(res, 400, { ...emailValidationError, auth: false });
+                if (emailValidationError) {
+                    return handleResponse(res, 400, { success: false, ...emailValidationError });
                 }
 
                 const verificationCode = generateRandomCode();
                 const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "updateVerification.html");
 
                 if (!emailSent) {
-                    return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de verificação.", auth: false });
+                    return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
                 }
 
                 const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword;
@@ -226,15 +228,9 @@ module.exports = class UserController {
                     expiresAt: Date.now() + 5 * 60 * 1000,
                 };
 
-                // AQUI, a API retorna uma flag para o cliente informando que uma verificação é necessária
-                return handleResponse(res, 200, {
-                    message: "Verificação de e-mail necessária. Um código foi enviado para o novo e-mail.",
-                    requiresEmailVerification: true, // << NOVO!
-                    auth: true,
-                });
+                return handleResponse(res, 200, { success: true, message: "Verificação de e-mail necessária.", details: "Um código foi enviado para o novo e-mail para confirmar a alteração.", data: { requiresEmailVerification: true }, arrayName: "data" });
             }
 
-            // Cenário 2: O e-mail NÃO foi alterado (apenas nome ou senha).
             const fieldsToUpdate = [];
             const values = [];
 
@@ -251,7 +247,7 @@ module.exports = class UserController {
             }
 
             if (fieldsToUpdate.length === 0) {
-                return handleResponse(res, 400, { error: "Nenhum campo para atualizar foi fornecido.", auth: true });
+                return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualizar foi fornecido.", details: "Por favor, forneça 'name', 'email' ou 'password' para atualizar." });
             }
 
             const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
@@ -261,16 +257,17 @@ module.exports = class UserController {
             const updatedUser = await findUserById(idUser);
             await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
 
-            // AQUI, a API retorna o objeto de usuário, pois a atualização é final.
             return handleResponse(res, 200, {
+                success: true,
                 message: "Usuário atualizado com sucesso.",
-                user: updatedUser, // << AQUI!
-                auth: true,
+                details: "As informações do seu perfil foram modificadas.",
+                data: updatedUser,
+                arrayName: "user"
             });
 
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a atualização." });
         }
     }
 
@@ -278,48 +275,13 @@ module.exports = class UserController {
         const { email, code } = req.body;
 
         if (!email || !code) {
-            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios.", auth: false });
+            return handleResponse(res, 400, { success: false, error: "E-mail e código são obrigatórios.", details: "Os campos 'email' e 'code' não foram fornecidos." });
         }
 
         const storedUpdate = tempUsers[email];
 
         if (!storedUpdate || storedUpdate.verificationCode !== code || Date.now() > storedUpdate.expiresAt) {
-            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
-        }
-
-        try {
-            const { idUser, name, newEmail, hashedPassword } = storedUpdate;
-            const updateQuery = `UPDATE user SET name = ?, email = ?, hashedPassword = ? WHERE idUser = ?`;
-            await queryAsync(updateQuery, [name, newEmail, hashedPassword, idUser]);
-
-            const updatedUser = await findUserById(idUser);
-            delete tempUsers[email];
-            await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
-
-            // AQUI, a API retorna o objeto de usuário após a verificação
-            return handleResponse(res, 200, {
-                message: "Usuário atualizado com sucesso.",
-                user: updatedUser, // << AQUI!
-                auth: true,
-            });
-        } catch (error) {
-            console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
-        }
-    }
-
-
-    static async verifyUpdate(req, res) {
-        const { email, code } = req.body;
-
-        if (!email || !code) {
-            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios.", auth: false });
-        }
-
-        const storedUpdate = tempUsers[email];
-
-        if (!storedUpdate || storedUpdate.verificationCode !== code || Date.now() > storedUpdate.expiresAt) {
-            return handleResponse(res, 401, { error: "Código de verificação inválido ou expirado." });
+            return handleResponse(res, 401, { success: false, error: "Código de verificação inválido ou expirado.", details: "O código fornecido não corresponde ou o tempo de validade expirou." });
         }
 
         try {
@@ -332,13 +294,15 @@ module.exports = class UserController {
             await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
 
             return handleResponse(res, 200, {
+                success: true,
                 message: "Usuário atualizado com sucesso.",
-                user: updatedUser,
-                auth: true,
+                details: "Seu e-mail e outras informações foram alteradas.",
+                data: updatedUser,
+                arrayName: "user"
             });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a verificação de atualização." });
         }
     }
 
@@ -346,13 +310,13 @@ module.exports = class UserController {
         const { idUser } = req.params;
 
         if (req.userId != idUser) {
-            return handleResponse(res, 403, { error: "Não autorizado", auth: false });
+            return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para desativar este usuário." });
         }
 
         try {
             const userToDelete = await findUserById(idUser);
             if (!userToDelete) {
-                return handleResponse(res, 404, { error: "Usuário não encontrado ou já desativado", auth: false });
+                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado ou já desativado", details: "O usuário não existe ou já foi desativado anteriormente." });
             }
 
             const updateQuery = `UPDATE user SET isActive = FALSE WHERE idUser = ?`;
@@ -361,12 +325,13 @@ module.exports = class UserController {
             await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
 
             return handleResponse(res, 200, {
+                success: true,
                 message: "Usuário desativado com sucesso.",
-                auth: true,
+                details: "Sua conta foi desativada e um e-mail de confirmação foi enviado."
             });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor", auth: false });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a desativação do usuário." });
         }
     }
 
@@ -376,14 +341,14 @@ module.exports = class UserController {
         try {
             const user = await findUserByEmail(email);
             if (!user) {
-                return handleResponse(res, 404, { error: "E-mail não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "E-mail não encontrado.", details: "O e-mail fornecido não está cadastrado em nossa base de dados." });
             }
 
             const verificationCode = generateRandomCode();
             const emailSent = await mailSender.sendPasswordRecoveryEmail(email, verificationCode);
 
             if (!emailSent) {
-                return handleResponse(res, 500, { error: "Erro ao enviar o e-mail de recuperação." });
+                return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de recuperação.", details: "Falha na comunicação com o serviço de e-mail." });
             }
 
             tempUsers[email] = {
@@ -392,11 +357,13 @@ module.exports = class UserController {
             };
 
             return handleResponse(res, 200, {
+                success: true,
                 message: "Código de recuperação enviado para o seu e-mail.",
+                details: "Verifique sua caixa de entrada, incluindo a pasta de spam."
             });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor" });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema ao processar a solicitação de recuperação." });
         }
     }
 
@@ -404,17 +371,19 @@ module.exports = class UserController {
         const { email, code } = req.body;
 
         if (!email || !code) {
-            return handleResponse(res, 400, { error: "E-mail e código são obrigatórios." });
+            return handleResponse(res, 400, { success: false, error: "E-mail e código são obrigatórios.", details: "Os campos 'email' e 'code' não foram fornecidos." });
         }
 
         const storedRecovery = tempUsers[email];
 
         if (!storedRecovery || storedRecovery.verificationCode !== code || Date.now() > storedRecovery.expiresAt) {
-            return handleResponse(res, 401, { error: "Código de recuperação inválido ou expirado." });
+            return handleResponse(res, 401, { success: false, error: "Código de recuperação inválido ou expirado.", details: "O código não corresponde ou o tempo de validade expirou. Por favor, solicite um novo código." });
         }
 
         return handleResponse(res, 200, {
-            message: "Código de recuperação validado com sucesso. Agora você pode alterar sua senha.",
+            success: true,
+            message: "Código de recuperação validado com sucesso.",
+            details: "Agora você pode alterar sua senha."
         });
     }
 
@@ -423,12 +392,12 @@ module.exports = class UserController {
 
         const storedRecovery = tempUsers[email];
         if (!storedRecovery || Date.now() > storedRecovery.expiresAt) {
-            return handleResponse(res, 401, { error: "Código de recuperação inválido ou expirado. Por favor, solicite um novo código." });
+            return handleResponse(res, 401, { success: false, error: "Código de recuperação inválido ou expirado.", details: "Por favor, solicite um novo código para alterar sua senha." });
         }
 
         const recoveryValidationError = validateUser.validateRecovery(req.body);
         if (recoveryValidationError) {
-            return handleResponse(res, 400, recoveryValidationError);
+            return handleResponse(res, 400, { success: false, ...recoveryValidationError });
         }
 
         try {
@@ -441,37 +410,42 @@ module.exports = class UserController {
             delete tempUsers[email];
 
             return handleResponse(res, 200, {
+                success: true,
                 message: "Senha alterada com sucesso.",
+                details: "Você pode agora fazer login com sua nova senha."
             });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor" });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema ao alterar a senha." });
         }
     }
+
     static async validatePassword(req, res) {
         const { idUser } = req.params;
-        const { password } = req.body; // A senha atual enviada do app
+        const { password } = req.body;
     
-        // Se a senha não foi fornecida, retorne um erro.
         if (!password) {
-            return handleResponse(res, 400, { error: "Senha é obrigatória." });
+            return handleResponse(res, 400, { success: false, error: "Senha é obrigatória.", details: "O campo 'password' não foi fornecido." });
         }
     
         try {
             const user = await findUserById(idUser);
             if (!user) {
-                return handleResponse(res, 404, { error: "Usuário não encontrado." });
+                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado.", details: "O ID do usuário não corresponde a nenhum registro." });
             }
     
             const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
     
             return handleResponse(res, 200, {
+                success: true,
                 message: "Validação de senha concluída.",
-                isValid: passwordOK, // Retorna true ou false
+                details: `A senha fornecida é ${passwordOK ? 'válida' : 'inválida'}.`,
+                data: { isValid: passwordOK },
+                arrayName: "data"
             });
         } catch (error) {
             console.error(error);
-            return handleResponse(res, 500, { error: "Erro Interno do Servidor." });
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor.", details: "Ocorreu um problema durante a validação da senha." });
         }
     }
 };
