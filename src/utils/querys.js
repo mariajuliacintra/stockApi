@@ -12,4 +12,23 @@ const findUserById = async (idUser) => {
     return results[0] || null;
 };
 
-module.exports = { findUserByEmail, findUserById };
+const validateForeignKey = async (tableName, idName, idValue) => {
+    const numericIdValue = Number(idValue);
+    if (isNaN(numericIdValue)) {
+        return { success: false, message: `O valor para ${idName} deve ser um número válido.`, error: "Erro de validação", details: `O valor '${idValue}' não é um número.` };
+    }
+
+    try {
+        const query = `SELECT COUNT(*) AS count FROM ${tableName} WHERE ${idName} = ?`;
+        const [result] = await queryAsync(query, [numericIdValue]);
+        if (result.count === 0) {
+            return { success: false, message: `O ID fornecido para a tabela '${tableName}' não existe.`, error: "Chave estrangeira inválida", details: `Não foi encontrado um registro com ${idName} = ${idValue}.` };
+        }
+        return { success: true };
+    } catch (error) {
+        console.error("Erro na validação de chaves estrangeiras:", error);
+        return { success: false, error: "Erro interno do servidor", details: "Ocorreu um problema inesperado durante a validação." };
+    }
+};
+
+module.exports = { findUserByEmail, findUserById, validateForeignKey };

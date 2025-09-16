@@ -1,30 +1,25 @@
 const { queryAsync } = require('../utils/functions');
-
-// Função auxiliar para validar a existência de uma chave estrangeira
-const validateForeignKey = async (tableName, idName, idValue) => {
-    const numericIdValue = Number(idValue);
-    if (isNaN(numericIdValue)) {
-        return { success: false, message: `O valor para ${idName} deve ser um número válido.`, error: "Erro de validação", details: `O valor '${idValue}' não é um número.` };
-    }
-
-    try {
-        const query = `SELECT COUNT(*) AS count FROM ${tableName} WHERE ${idName} = ?`;
-        const [result] = await queryAsync(query, [numericIdValue]);
-        if (result.count === 0) {
-            return { success: false, message: `O ID fornecido para a tabela '${tableName}' não existe.`, error: "Chave estrangeira inválida", details: `Não foi encontrado um registro com ${idName} = ${idValue}.` };
-        }
-        return { success: true };
-    } catch (error) {
-        console.error("Erro na validação de chaves estrangeiras:", error);
-        return { success: false, error: "Erro interno do servidor", details: "Ocorreu um problema inesperado durante a validação." };
-    }
-};
+const { validateForeignKey } = require('../utils/querys');
 
 const validateCreateItem = async (data) => {
-    const { name, fkIdCategory, quantity, fkIdLocation, fkIdUser, minimumStock, sapCode } = data;
+    const { name, fkIdCategory, quantity, fkIdLocation, fkIdUser, minimumStock, sapCode, technicalSpecs } = data;
 
     if (!name || fkIdCategory === undefined || quantity === undefined || fkIdLocation === undefined || fkIdUser === undefined) {
         return { success: false, error: "Campos obrigatórios ausentes", message: "Os campos 'name', 'fkIdCategory', 'quantity', 'fkIdLocation' e 'fkIdUser' são obrigatórios.", details: "Verifique se todos os campos necessários foram fornecidos." };
+    }
+
+    if (technicalSpecs !== undefined && technicalSpecs !== null) {
+        if (typeof technicalSpecs !== 'object' || Object.keys(technicalSpecs).length === 0) {
+            return { success: false, error: "Formato de especificações técnicas inválido", message: "As especificações técnicas devem ser um objeto não vazio.", details: "O valor fornecido para 'technicalSpecs' não é um objeto válido ou está vazio." };
+        }
+        for (const key in technicalSpecs) {
+            if (!/^\d+$/.test(key)) {
+                return { success: false, error: "Formato de especificações técnicas inválido", message: `A chave '${key}' nas especificações técnicas deve ser um número inteiro (ID).`, details: "Verifique se todas as chaves de especificações técnicas são IDs numéricos válidos." };
+            }
+            if (technicalSpecs[key] === undefined || technicalSpecs[key] === null) {
+                 return { success: false, error: "Valor de especificação técnica inválido", message: `O valor para a chave '${key}' nas especificações técnicas não pode ser nulo ou indefinido.`, details: "Cada especificação técnica deve ter um valor associado." };
+            }
+        }
     }
 
     if (minimumStock !== undefined) {
@@ -107,6 +102,5 @@ const validateUpdateInformation = (data) => {
 
 module.exports = {
     validateCreateItem,
-    validateUpdateInformation,
-    validateForeignKey
+    validateUpdateInformation
 };
