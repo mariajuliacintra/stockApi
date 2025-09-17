@@ -88,4 +88,8 @@ router.post("/transactions", verifyJWT, authorizeManager, transactionController.
 router.get("/transactions/item/:fkIdItem", verifyJWT, authorizeManager, transactionController.getTransactionByItem);
 router.get("/transactions/user/:fkIdUser", verifyJWT, transactionController.getTransactionByUser);
 
+router.get("/", (req, res) => {
+  res.status(200).json({ status: "API Online" });
+});
+
 module.exports = router;
