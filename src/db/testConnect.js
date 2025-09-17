@@ -1,16 +1,22 @@
 const connect = require("./connect");
 
-module.exports = function testConnect() {
-  try {
-    const query = `SELECT 'Conexão bem-sucedida' AS Mensagem`;
-    connect.query(query, function (err) {
-      if (err) {
-        console.log("Conexão não realizada", err);
-        return;
+let attempts = 0;
+const MAX_ATTEMPTS = 10;
+const RETRY_DELAY = 5000;
+
+module.exports = function testConnection() {
+  connect.query("SELECT 1", (err, result) => {
+    if (err) {
+      if (attempts < MAX_ATTEMPTS) {
+        console.log(`Tentativa de conexão falhou. Tentando novamente em ${RETRY_DELAY / 1000} segundos...`);
+        attempts++;
+        setTimeout(testConnection, RETRY_DELAY);
+      } else {
+        console.error("Conexão falhou após várias tentativas. Encerrando o processo.", err);
+        process.exit(1); 
       }
-      console.log("Conexão realizada com MySQL \n");
-    });
-  } catch(error) {
-    console.error('Erro ao executar a query/consulta:', error)
-  }
+    } else {
+      console.log("Conexão com o MySQL realizada com sucesso!");
+    }
+  });
 };

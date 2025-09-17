@@ -1,19 +1,5 @@
 const { queryAsync } = require('../utils/functions');
-
-const validateForeignKey = async (table, column, value) => {
-    try {
-        const query = `SELECT 1 FROM ${table} WHERE ${column} = ? LIMIT 1`;
-        const result = await queryAsync(query, [value]);
-        if (result.length > 0) {
-            return { success: true };
-        } else {
-            return { success: false, error: "Chave estrangeira inválida", details: `O ID fornecido para a tabela '${table}' não existe.` };
-        }
-    } catch (error) {
-        console.error(`Erro ao validar chave estrangeira ${table}.${column}:`, error);
-        return { success: false, error: "Erro interno do servidor", details: "Ocorreu um problema inesperado durante a validação." };
-    }
-};
+const { validateForeignKey } = require('../utils/querys');
 
 const validateCreateLot = async (data) => {
     const { quantity, fkIdLocation, fkIdUser, sapCode, idItem } = data;

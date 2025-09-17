@@ -334,9 +334,13 @@ module.exports = class ItemController {
             ...itemData
         } = req.body;
         const validationResult = await validateItem.validateCreateItem(req.body);
-        if (!validationResult || !validationResult.isValid) {
-            return handleResponse(res, 400, { success: false, error: "Erro de validação.", details: validationResult.message });
-        }
+    if (!validationResult.success) {
+        return handleResponse(res, 400, { 
+            success: false, 
+            error: validationResult.error || "Erro de validação.", 
+            details: validationResult.details || validationResult.message 
+        });
+    }
         try {
             await queryAsync("START TRANSACTION");
             const existingItemQuery = "SELECT idItem, name FROM item WHERE sapCode = ?";
