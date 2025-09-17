@@ -74,15 +74,13 @@ router.post("/technicalSpec", verifyJWT, authorizeManager, technicalSpecControll
 router.put("/technicalSpec/:idTechnicalSpec", verifyJWT, authorizeManager, technicalSpecController.updateTechnicalSpec);
 router.delete("/technicalSpec/:idTechnicalSpec", verifyJWT, authorizeManager, technicalSpecController.deleteTechnicalSpec);
 
-router.get("/report/pdf/general", reportControllerPdf.generateGeneralReport);
-router.get("/report/pdf/low-stock", reportControllerPdf.generateLowStockReport);
-router.get("/report/pdf/transactions",reportControllerPdf.generateTransactionsReport);
+router.get("/report/pdf/general",verifyJWT, authorizeManager, reportControllerPdf.generateGeneralReport);
+router.get("/report/pdf/low-stock", verifyJWT, authorizeManager, reportControllerPdf.generateLowStockReport);
+router.get("/report/pdf/transactions", verifyJWT, authorizeManager,reportControllerPdf.generateTransactionsReport);
 
 router.get("/report/excel/general", reportControllerExcel.generateGeneralReportExcel);
 router.get("/report/excel/low-stock",reportControllerExcel.generateLowStockReportExcel);
 router.get("/report/excel/transactions", reportControllerExcel.generateTransactionsReportExcel);
-router.get("/report/excel/user-report", reportControllerExcel.generateUsersReportExcel);
-router.get("/report/excel/by-location", reportControllerExcel.generateItemsByLocationReportExcel)
 
 router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
 router.get("/transactions/:idTransaction", verifyJWT, authorizeManager, transactionController.getTransactionById);
