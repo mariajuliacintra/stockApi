@@ -88,13 +88,13 @@ module.exports = class UserController {
                 const { idUser, name, hashedPassword } = storedUser;
                 const reactivateQuery = `UPDATE user SET name = ?, hashedPassword = ?, isActive = TRUE WHERE idUser = ?`;
                 await queryAsync(reactivateQuery, [name, hashedPassword, idUser]);
-                
+
                 const user = await findUserById(idUser);
                 const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
                 delete tempUsers[email];
 
                 const isManager = user.role === "manager";
-                
+
                 return handleResponse(res, 200, {
                     success: true,
                     message: "Conta reativada com sucesso!",
@@ -118,7 +118,7 @@ module.exports = class UserController {
             delete tempUsers[email];
 
             const isManager = user.role === "manager";
-            
+
             return handleResponse(res, 200, {
                 success: true,
                 message: "Cadastro bem-sucedido",
@@ -174,10 +174,37 @@ module.exports = class UserController {
     }
 
     static async getAllUsers(req, res) {
-        const query = `SELECT idUser, name, email, role, createdAt FROM user WHERE isActive = TRUE`;
         try {
-            const results = await queryAsync(query);
-            return handleResponse(res, 200, { success: true, message: "Obtendo todos os usuários", details: "Lista de usuários ativos retornada com sucesso.", data: results, arrayName: "users" });
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = (page - 1) * limit;
+
+            const countQuery = "SELECT COUNT(*) as count FROM user WHERE isActive = TRUE";
+            const [countResult] = await queryAsync(countQuery);
+            const totalItems = countResult.count;
+            const totalPages = Math.ceil(totalItems / limit);
+
+            const dataQuery = `
+                SELECT idUser, name, email, role, createdAt
+                FROM user 
+                WHERE isActive = TRUE
+                ORDER BY name
+                LIMIT ?
+                OFFSET ?
+            `;
+            const users = await queryAsync(dataQuery, [limit, offset]);
+
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Lista de usuários obtida com sucesso.",
+                data: {
+                    totalItems: totalItems,
+                    totalPages: totalPages,
+                    currentPage: page,
+                    users: users
+                },
+                arrayName: "data"
+            });
         } catch (error) {
             console.error(error);
             return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema ao buscar a lista de usuários." });
@@ -423,19 +450,19 @@ module.exports = class UserController {
     static async validatePassword(req, res) {
         const { idUser } = req.params;
         const { password } = req.body;
-    
+
         if (!password) {
             return handleResponse(res, 400, { success: false, error: "Senha é obrigatória.", details: "O campo 'password' não foi fornecido." });
         }
-    
+
         try {
             const user = await findUserById(idUser);
             if (!user) {
                 return handleResponse(res, 404, { success: false, error: "Usuário não encontrado.", details: "O ID do usuário não corresponde a nenhum registro." });
             }
-    
+
             const passwordOK = bcrypt.compareSync(password, user.hashedPassword);
-    
+
             return handleResponse(res, 200, {
                 success: true,
                 message: "Validação de senha concluída.",

@@ -119,6 +119,10 @@ module.exports = class ItemController {
 
     static async getAllItems(req, res) {
         try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = (page - 1) * limit;
+
             const query = `
                 SELECT
                     i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock,
@@ -130,8 +134,18 @@ module.exports = class ItemController {
                 JOIN category c ON i.fkIdCategory = c.idCategory
                 LEFT JOIN lots l ON i.idItem = l.fkIdItem
                 GROUP BY i.idItem
+                ORDER BY i.name
+                LIMIT ? OFFSET ?
             `;
-            const items = await queryAsync(query);
+            const items = await queryAsync(query, [limit, offset]);
+
+            const countQuery = `
+                SELECT COUNT(*) as totalCount
+                FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
+            `;
+            const [{ totalCount }] = await queryAsync(countQuery);
+            const totalPages = Math.ceil(totalCount / limit);
 
             const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
             const keysMap = technicalSpecKeys.reduce((acc, spec) => {
@@ -156,7 +170,18 @@ module.exports = class ItemController {
                 };
             });
 
-            return handleResponse(res, 200, { success: true, message: "Lista de itens obtida com sucesso.", data: formattedItems, arrayName: "items" });
+            return handleResponse(res, 200, { 
+                success: true, 
+                message: "Lista de itens obtida com sucesso.", 
+                data: formattedItems, 
+                arrayName: "items",
+                pagination: {
+                    totalItems: totalCount,
+                    totalPages: totalPages,
+                    currentPage: page,
+                    itemsPerPage: limit
+                } 
+            });
         } catch (error) {
             console.error("Erro ao buscar e agrupar itens:", error);
             return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
@@ -165,6 +190,10 @@ module.exports = class ItemController {
 
     static async getAllItemsDetails(req, res) {
         try {
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = (page - 1) * limit;
+
             const query = `
                 SELECT
                     i.idItem, i.name, i.aliases, i.brand, i.description, i.technicalSpecs, i.minimumStock,
@@ -188,9 +217,18 @@ module.exports = class ItemController {
                 LEFT JOIN image img ON i.fkIdImage = img.idImage
                 GROUP BY i.idItem
                 ORDER BY i.name
+                LIMIT ? OFFSET ?
             `;
-            const items = await queryAsync(query);
-            
+            const items = await queryAsync(query, [limit, offset]);
+
+            const countQuery = `
+                SELECT COUNT(*) as totalCount
+                FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
+            `;
+            const [{ totalCount }] = await queryAsync(countQuery);
+            const totalPages = Math.ceil(totalCount / limit);
+
             const technicalSpecIds = new Set();
             items.forEach(item => {
                 if (item.technicalSpecs) {
@@ -242,7 +280,18 @@ module.exports = class ItemController {
                 return newItem;
             });
 
-            return handleResponse(res, 200, { success: true, message: "Lista de itens com detalhes obtida com sucesso.", data: finalItems, arrayName: "items" });
+            return handleResponse(res, 200, { 
+                success: true, 
+                message: "Lista de itens com detalhes obtida com sucesso.", 
+                data: finalItems, 
+                arrayName: "items",
+                pagination: {
+                    totalItems: totalCount,
+                    totalPages: totalPages,
+                    currentPage: page,
+                    itemsPerPage: limit
+                } 
+            });
 
         } catch (error) {
             console.error("Erro ao buscar itens com detalhes:", error);
@@ -253,6 +302,9 @@ module.exports = class ItemController {
     static async filterItems(req, res) {
         try {
             const { name, idCategory } = req.body;
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = (page - 1) * limit;
 
             const technicalSpecKeys = await queryAsync(`SELECT idTechnicalSpec, technicalSpecKey FROM technicalSpec`);
             const keysMap = technicalSpecKeys.reduce((acc, spec) => {
@@ -272,7 +324,15 @@ module.exports = class ItemController {
                 LEFT JOIN lots l ON i.idItem = l.fkIdItem
                 WHERE 1=1
             `;
+            let countQuery = `
+                SELECT COUNT(DISTINCT i.idItem) as totalCount
+                FROM item i
+                JOIN category c ON i.fkIdCategory = c.idCategory
+                LEFT JOIN lots l ON i.idItem = l.fkIdItem
+                WHERE 1=1
+            `;
             const queryParams = [];
+            const countQueryParams = [];
 
             if (name) {
                 const normalizedName = name.trim();
@@ -282,18 +342,30 @@ module.exports = class ItemController {
                         REPLACE(LOWER(i.aliases), ' ', '') LIKE ?
                     )
                 `;
+                countQuery += `
+                    AND (
+                        REPLACE(LOWER(i.name), ' ', '') LIKE ? OR
+                        REPLACE(LOWER(i.aliases), ' ', '') LIKE ?
+                    )
+                `;
                 queryParams.push(`%${normalizedName.toLowerCase().replace(/\s/g, '')}%`, `%${normalizedName.toLowerCase().replace(/\s/g, '')}%`);
+                countQueryParams.push(`%${normalizedName.toLowerCase().replace(/\s/g, '')}%`, `%${normalizedName.toLowerCase().replace(/\s/g, '')}%`);
             }
 
             if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
                 const placeholders = idCategory.map(() => '?').join(',');
                 query += ` AND i.fkIdCategory IN (${placeholders})`;
+                countQuery += ` AND i.fkIdCategory IN (${placeholders})`;
                 queryParams.push(...idCategory);
+                countQueryParams.push(...idCategory);
             }
 
-            query += ` GROUP BY i.idItem ORDER BY i.name`;
+            query += ` GROUP BY i.idItem ORDER BY i.name LIMIT ? OFFSET ?`;
+            queryParams.push(limit, offset);
 
             const items = await queryAsync(query, queryParams);
+            const [{ totalCount }] = await queryAsync(countQuery, countQueryParams);
+            const totalPages = Math.ceil(totalCount / limit);
 
             const formattedItems = items.map(item => {
                 if (!item.technicalSpecs) {
@@ -312,7 +384,18 @@ module.exports = class ItemController {
                 };
             });
 
-            return handleResponse(res, 200, { success: true, message: "Itens filtrados com sucesso.", data: formattedItems, arrayName: "items" });
+            return handleResponse(res, 200, { 
+                success: true, 
+                message: "Itens filtrados com sucesso.", 
+                data: formattedItems, 
+                arrayName: "items",
+                pagination: {
+                    totalItems: totalCount,
+                    totalPages: totalPages,
+                    currentPage: page,
+                    itemsPerPage: limit
+                } 
+            });
         } catch (error) {
             console.error("Erro ao filtrar itens:", error);
             return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
