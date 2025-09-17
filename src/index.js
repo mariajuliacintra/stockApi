@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const testConnect = require("./db/testConnect");
 const fs = require('fs');
 const path = require('path');
 
@@ -9,7 +8,6 @@ class AppController {
     this.express = express();
     this.middlewares();
     this.routes();
-    testConnect();
     require('./services/cron/cronjobVerification');
     const uploadsDir = path.join(__dirname, 'uploads');
     if (!fs.existsSync(uploadsDir)) {
