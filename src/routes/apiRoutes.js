@@ -14,6 +14,8 @@ const transactionController = require("../controllers/transactionController");
 const reportControllerExcel = require("../controllers/reportControllerExcel");
 const reportControllerPdf = require("../controllers/reportControllerPdf");
 
+const ImportControllerReports = require("../controllers/importControllerReports");
+
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
 const upload = require('../services/upload');
@@ -81,6 +83,8 @@ router.get("/report/pdf/transactions", verifyJWT, authorizeManager,reportControl
 router.get("/report/excel/general", reportControllerExcel.generateGeneralReportExcel);
 router.get("/report/excel/low-stock",reportControllerExcel.generateLowStockReportExcel);
 router.get("/report/excel/transactions", reportControllerExcel.generateTransactionsReportExcel);
+
+router.post("/import/items",verifyJWT,authorizeManager,upload.single("file"), ImportControllerReports.importItemsFromExcel);
 
 router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
 router.get("/transactions/:idTransaction", verifyJWT, authorizeManager, transactionController.getTransactionById);
