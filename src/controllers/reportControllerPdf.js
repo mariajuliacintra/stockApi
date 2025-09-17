@@ -1,6 +1,15 @@
 const PDFDocument = require("pdfkit");
 const { queryAsync } = require("../utils/functions");
 
+function formatAction(action) {
+    switch (action) {
+        case "IN": return "Entrada";
+        case "OUT": return "Saída";
+        case "AJUST": return "Ajuste";
+        default: return action;
+    }
+}
+
 module.exports = class ReportControllerPdf {
     // ================== RELATÓRIO GERAL ==================
     static async generateGeneralReport(req, res) {
@@ -148,14 +157,21 @@ module.exports = class ReportControllerPdf {
     }
 
     // ================== RELATÓRIO DE TRANSAÇÕES ==================
-    static async generateTransactionsReport(req, res) {
+        static async generateTransactionsReport(req, res) {
         try {
             const transactions = await queryAsync(`
-                SELECT t.transactionDate, t.actionDescription, t.quantityChange,
-                       u.name AS userName, i.name AS itemName, i.category
+                SELECT 
+                    t.transactionDate,
+                    t.actionDescription,
+                    t.quantityChange,
+                    u.name AS userName,
+                    i.name AS itemName,
+                    c.categoryValue AS category
                 FROM transactions t
                 LEFT JOIN user u ON t.fkIdUser = u.idUser
-                LEFT JOIN item i ON t.fkIdItem = i.idItem
+                LEFT JOIN lots l ON t.fkIdLot = l.idLot
+                LEFT JOIN item i ON l.fkIdItem = i.idItem
+                LEFT JOIN category c ON i.fkIdCategory = c.idCategory
                 ORDER BY t.transactionDate DESC
                 LIMIT 50
             `);
@@ -179,7 +195,7 @@ module.exports = class ReportControllerPdf {
                     doc.font("Helvetica-Bold").text("; Item: ", { continued: true });
                     doc.font("Helvetica").text(`${tx.category} - ${tx.itemName}`, { continued: true });
                     doc.font("Helvetica-Bold").text("; Ação: ", { continued: true });
-                    doc.font("Helvetica").text(tx.actionDescription, { continued: true });
+                    doc.font("Helvetica").text(formatAction(tx.actionDescription), { continued: true });
                     doc.font("Helvetica-Bold").text("; Quantidade: ", { continued: true });
                     doc.font("Helvetica").text(tx.quantityChange.toString());
                 });
