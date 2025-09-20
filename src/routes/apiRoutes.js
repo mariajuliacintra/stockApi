@@ -35,7 +35,6 @@ router.post("/user/recovery-password", userController.recoveryPassword);
 // Rotas para buscar informações de itens
 router.get("/items", verifyJWT, itemController.getAllItems);
 router.get("/item/:idItem/details", verifyJWT, itemController.getItemByIdDetails);
-router.get("/items/details", verifyJWT, itemController.getAllItemsDetails);
 router.post("/items/filter", verifyJWT, itemController.filterItems);
 
 // Rotas para checagem de itens
