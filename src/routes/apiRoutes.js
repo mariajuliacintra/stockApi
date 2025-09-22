@@ -42,21 +42,21 @@ router.post("/items/filter", verifyJWT, itemController.filterItems);
 router.get("/item/check/:sapCode", verifyJWT, itemController.checkItemBySapCode);
 
 // Rotas para a criação e gerenciamento de itens
-router.post("/item", verifyJWT, authorizeManager, itemController.createItem);
-router.put('/item/:idItem/lot/quantity', verifyJWT, authorizeManager, itemController.updateSingleLotQuantity);
-router.put("/item/information/:idItem", verifyJWT, authorizeManager, itemController.updateItemInformation);
+router.post("/item", verifyJWT, itemController.createItem);
+router.put('/item/:idItem/lot/quantity', verifyJWT, itemController.updateSingleLotQuantity);
+router.put("/item/information/:idItem", verifyJWT, itemController.updateItemInformation);
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
 
 // Novas rotas para a gestão de imagens de itens
-router.post("/item/image/:idItem", verifyJWT, authorizeManager, upload.single('image'), itemController.insertImage);
-router.delete("/item/image/:idItem", verifyJWT, authorizeManager, itemController.deleteImage);
+router.post("/item/image/:idItem", verifyJWT, upload.single('image'), itemController.insertImage);
+router.delete("/item/image/:idItem", verifyJWT, itemController.deleteImage);
 
 // Rotas para a criação e gerenciamento de lotes
-router.post("/lot/sapcode/:sapCode", verifyJWT, authorizeManager, lotController.createLotBySapCode);
-router.post("/lot/item/:idItem", verifyJWT, authorizeManager, lotController.createLotByIdItem);
+router.post("/lot/sapcode/:sapCode", verifyJWT,  lotController.createLotBySapCode);
+router.post("/lot/item/:idItem", verifyJWT,  lotController.createLotByIdItem);
 
-router.put("/lot/quantity/:idLot", verifyJWT, authorizeManager, lotController.updateLotQuantity);
-router.put("/lot/information/:idLot", verifyJWT, authorizeManager, lotController.updateLotInformation);
+router.put("/lot/quantity/:idLot", verifyJWT, lotController.updateLotQuantity);
+router.put("/lot/information/:idLot", verifyJWT, lotController.updateLotInformation);
 
 router.get("/location", verifyJWT, locationController.getLocations);
 router.get("/location/:idLocation", verifyJWT, locationController.getLocationById);
