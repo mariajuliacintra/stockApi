@@ -213,7 +213,7 @@ module.exports = class UserController {
 
 static async updateUser(req, res) {
     const { idUser } = req.params;
-    const { name, email, password } = req.body;
+    const { name, email, password, role: newRole } = req.body;
     const { role, userId } = req;
 
     if (role !== "manager" && userId != idUser) {
@@ -252,6 +252,7 @@ static async updateUser(req, res) {
                 oldEmail: userToUpdate.email,
                 newEmail: email,
                 hashedPassword,
+                newRole: newRole || userToUpdate.role,
                 verificationCode,
                 expiresAt: Date.now() + 5 * 60 * 1000,
             };
@@ -274,8 +275,17 @@ static async updateUser(req, res) {
             values.push(hashedPassword);
         }
 
+        if (newRole) {
+            if (role === "manager") {
+                fieldsToUpdate.push("role = ?");
+                values.push(newRole);
+            } else {
+                return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar a função do usuário." });
+            }
+        }
+
         if (fieldsToUpdate.length === 0) {
-            return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualizar foi fornecido.", details: "Por favor, forneça 'name', 'email' ou 'password' para atualizar." });
+            return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualizar foi fornecido.", details: "Por favor, forneça 'name', 'email', 'password' ou 'role' para atualizar." });
         }
 
         const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
