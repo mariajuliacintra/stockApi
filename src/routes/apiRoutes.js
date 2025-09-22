@@ -19,6 +19,7 @@ const ImportControllerReports = require("../controllers/importControllerReports"
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
 const upload = require('../services/upload');
+const uploadExcel = require('../services/uploadExcel');
 
 router.post("/user/register", userController.registerUser);
 router.post("/user/verify-register", userController.verifyUser);
@@ -84,7 +85,7 @@ router.get("/report/excel/general", reportControllerExcel.generateGeneralReportE
 router.get("/report/excel/low-stock",reportControllerExcel.generateLowStockReportExcel);
 router.get("/report/excel/transactions", reportControllerExcel.generateTransactionsReportExcel);
 
-router.post("/import/items",verifyJWT,authorizeManager,upload.single("file"), ImportControllerReports.importItemsFromExcel);
+router.post("/import/excel/items", uploadExcel.single("file"), ImportControllerReports.importItemsExcel);
 
 router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
 router.get("/transactions/:idTransaction", verifyJWT, authorizeManager, transactionController.getTransactionById);
