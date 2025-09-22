@@ -211,92 +211,93 @@ module.exports = class UserController {
         }
     }
 
-    static async updateUser(req, res) {
-        const { idUser } = req.params;
-        const { name, email, password } = req.body;
+static async updateUser(req, res) {
+    const { idUser } = req.params;
+    const { name, email, password } = req.body;
+    const { role, userId } = req;
 
-        if (req.userId != idUser) {
-            return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar este usuário." });
-        }
-
-        const updateValidationError = validateUser.validateUpdate(req.body);
-        if (updateValidationError) {
-            return handleResponse(res, 400, { success: false, ...updateValidationError });
-        }
-
-        try {
-            const userToUpdate = await findUserById(idUser);
-            if (!userToUpdate) {
-                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário que você está tentando atualizar não existe." });
-            }
-
-            if (email && email !== userToUpdate.email) {
-                const emailValidationError = await validateUser.validateEmail(email);
-                if (emailValidationError) {
-                    return handleResponse(res, 400, { success: false, ...emailValidationError });
-                }
-
-                const verificationCode = generateRandomCode();
-                const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "updateVerification.html");
-
-                if (!emailSent) {
-                    return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
-                }
-
-                const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword;
-
-                tempUsers[email] = {
-                    idUser,
-                    name: name || userToUpdate.name,
-                    oldEmail: userToUpdate.email,
-                    newEmail: email,
-                    hashedPassword,
-                    verificationCode,
-                    expiresAt: Date.now() + 5 * 60 * 1000,
-                };
-
-                return handleResponse(res, 200, { success: true, message: "Verificação de e-mail necessária.", details: "Um código foi enviado para o novo e-mail para confirmar a alteração.", data: { requiresEmailVerification: true }, arrayName: "data" });
-            }
-
-            const fieldsToUpdate = [];
-            const values = [];
-
-            if (name) {
-                fieldsToUpdate.push("name = ?");
-                values.push(name);
-            }
-
-            if (password) {
-                const saltRounds = Number(process.env.SALT_ROUNDS);
-                const hashedPassword = bcrypt.hashSync(password, saltRounds);
-                fieldsToUpdate.push("hashedPassword = ?");
-                values.push(hashedPassword);
-            }
-
-            if (fieldsToUpdate.length === 0) {
-                return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualizar foi fornecido.", details: "Por favor, forneça 'name', 'email' ou 'password' para atualizar." });
-            }
-
-            const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
-            values.push(idUser);
-
-            await queryAsync(updateQuery, values);
-            const updatedUser = await findUserById(idUser);
-            await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
-
-            return handleResponse(res, 200, {
-                success: true,
-                message: "Usuário atualizado com sucesso.",
-                details: "As informações do seu perfil foram modificadas.",
-                data: updatedUser,
-                arrayName: "user"
-            });
-
-        } catch (error) {
-            console.error(error);
-            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a atualização." });
-        }
+    if (role !== "manager" && userId != idUser) {
+        return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar este usuário." });
     }
+
+    const updateValidationError = validateUser.validateUpdate(req.body);
+    if (updateValidationError) {
+        return handleResponse(res, 400, { success: false, ...updateValidationError });
+    }
+
+    try {
+        const userToUpdate = await findUserById(idUser);
+        if (!userToUpdate) {
+            return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário que você está tentando atualizar não existe." });
+        }
+
+        if (email && email !== userToUpdate.email) {
+            const emailValidationError = await validateUser.validateEmail(email);
+            if (emailValidationError) {
+                return handleResponse(res, 400, { success: false, ...emailValidationError });
+            }
+
+            const verificationCode = generateRandomCode();
+            const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "updateVerification.html");
+
+            if (!emailSent) {
+                return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
+            }
+
+            const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword;
+
+            tempUsers[email] = {
+                idUser,
+                name: name || userToUpdate.name,
+                oldEmail: userToUpdate.email,
+                newEmail: email,
+                hashedPassword,
+                verificationCode,
+                expiresAt: Date.now() + 5 * 60 * 1000,
+            };
+
+            return handleResponse(res, 200, { success: true, message: "Verificação de e-mail necessária.", details: "Um código foi enviado para o novo e-mail para confirmar a alteração.", data: { requiresEmailVerification: true }, arrayName: "data" });
+        }
+
+        const fieldsToUpdate = [];
+        const values = [];
+
+        if (name) {
+            fieldsToUpdate.push("name = ?");
+            values.push(name);
+        }
+
+        if (password) {
+            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const hashedPassword = bcrypt.hashSync(password, saltRounds);
+            fieldsToUpdate.push("hashedPassword = ?");
+            values.push(hashedPassword);
+        }
+
+        if (fieldsToUpdate.length === 0) {
+            return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualizar foi fornecido.", details: "Por favor, forneça 'name', 'email' ou 'password' para atualizar." });
+        }
+
+        const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
+        values.push(idUser);
+
+        await queryAsync(updateQuery, values);
+        const updatedUser = await findUserById(idUser);
+        await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
+
+        return handleResponse(res, 200, {
+            success: true,
+            message: "Usuário atualizado com sucesso.",
+            details: "As informações do seu perfil foram modificadas.",
+            data: updatedUser,
+            arrayName: "user"
+        });
+
+    } catch (error) {
+        console.error(error);
+        return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a atualização." });
+    }
+}
 
     static async verifyUpdate(req, res) {
         const { email, code } = req.body;
@@ -333,34 +334,47 @@ module.exports = class UserController {
         }
     }
 
-    static async deleteUser(req, res) {
-        const { idUser } = req.params;
+static async deleteUser(req, res) {
+    const { idUser } = req.params;
+    const { role, userId } = req;
 
-        if (req.userId != idUser) {
-            return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para desativar este usuário." });
-        }
-
-        try {
-            const userToDelete = await findUserById(idUser);
-            if (!userToDelete) {
-                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado ou já desativado", details: "O usuário não existe ou já foi desativado anteriormente." });
-            }
-
-            const updateQuery = `UPDATE user SET isActive = FALSE WHERE idUser = ?`;
-            await queryAsync(updateQuery, [idUser]);
-
-            await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
-
-            return handleResponse(res, 200, {
-                success: true,
-                message: "Usuário desativado com sucesso.",
-                details: "Sua conta foi desativada e um e-mail de confirmação foi enviado."
-            });
-        } catch (error) {
-            console.error(error);
-            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a desativação do usuário." });
-        }
+    if (role !== "manager" && userId != idUser) {
+        return handleResponse(res, 403, { 
+            success: false, 
+            error: "Não autorizado", 
+            details: "Você não tem permissão para desativar este usuário." 
+        });
     }
+
+    try {
+        const userToDelete = await findUserById(idUser);
+        if (!userToDelete) {
+            return handleResponse(res, 404, { 
+                success: false, 
+                error: "Usuário não encontrado ou já desativado", 
+                details: "O usuário não existe ou já foi desativado anteriormente." 
+            });
+        }
+
+        const updateQuery = `UPDATE user SET isActive = FALSE WHERE idUser = ?`;
+        await queryAsync(updateQuery, [idUser]);
+
+        await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
+
+        return handleResponse(res, 200, {
+            success: true,
+            message: "Usuário desativado com sucesso.",
+            details: "Sua conta foi desativada e um e-mail de confirmação foi enviado."
+        });
+    } catch (error) {
+        console.error(error);
+        return handleResponse(res, 500, { 
+            success: false, 
+            error: "Erro Interno do Servidor", 
+            details: "Ocorreu um problema inesperado durante a desativação do usuário." 
+        });
+    }
+}
 
     static async verifyRecoveryPassword(req, res) {
         const { email } = req.body;
