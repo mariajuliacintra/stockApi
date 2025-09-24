@@ -70,29 +70,28 @@ module.exports = class UserController {
         }
     }
 
-    static async registerUserByManager(req, res) {
-        const { name, email, password, role: newRole } = req.body;
-        const { role } = req;
+static async registerUserByManager(req, res) {
+    const { name, email, password, role: newRole } = req.body;
+    const { role } = req;
 
-        if (role !== "manager") {
-            return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Apenas gerentes podem cadastrar novos usuários." });
-        }
+    if (role !== "manager") {
+        return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Apenas gerentes podem cadastrar novos usuários." });
+    }
 
-        const userValidationError = validateUser.validateUser(req.body);
-        if (userValidationError) {
-            return handleResponse(res, 400, { success: false, ...userValidationError });
-        }
+    const userValidationError = validateUser.validateUser(req.body);
+    if (userValidationError) {
+        return handleResponse(res, 400, { success: false, ...userValidationError });
+    }
 
-        if (!newRole || !["user", "manager"].includes(newRole)) {
-            return handleResponse(res, 400, { success: false, error: "A função (role) é obrigatória e deve ser 'user' ou 'manager'." });
-        }
+    if (!newRole || !["user", "manager"].includes(newRole)) {
+        return handleResponse(res, 400, { success: false, error: "A função (role) é obrigatória e deve ser 'user' ou 'manager'." });
+    }
 
-        try {
-            const userExists = await findUserByEmail(email);
-            if (userExists) {
-                return handleResponse(res, 409, { success: false, error: "E-mail já cadastrado", details: "Este e-mail já está sendo utilizado por outro usuário." });
-            }
-
+    try {
+        // Passo 1: Verificar se a conta já existe e está inativa.
+        const userToReactivate = await validateUser.findUserByEmailAndActiveStatus(email, false);
+        if (userToReactivate) {
+            // Lógica de reativação:
             const verificationCode = generateRandomCode();
             const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
 
@@ -104,21 +103,53 @@ module.exports = class UserController {
             const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
             tempUsers[email] = {
+                idUser: userToReactivate.idUser,
                 name,
-                email,
                 hashedPassword,
                 newRole,
                 verificationCode,
                 expiresAt: Date.now() + 5 * 60 * 1000,
-                isManagerRegistration: true,
+                reactivating: true,
+                isManagerRegistration: true, // Adiciona esta flag para manter a distinção
             };
 
-            return handleResponse(res, 200, { success: true, message: "Usuário temporariamente cadastrado.", details: "Verifique o e-mail para o código de verificação." });
-        } catch (error) {
-            console.error(error);
-            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado. Tente novamente mais tarde." });
+            return handleResponse(res, 200, { success: true, message: "E-mail já cadastrado, mas a conta está inativa.", details: "Um código de verificação foi enviado para reativá-la." });
         }
+
+        // Se o usuário não existe ou está ativo, verificar se o e-mail já existe de forma genérica.
+        const userExists = await findUserByEmail(email);
+        if (userExists) {
+            return handleResponse(res, 409, { success: false, error: "E-mail já cadastrado", details: "Este e-mail já está sendo utilizado por outro usuário." });
+        }
+
+        // Lógica de novo cadastro:
+        const verificationCode = generateRandomCode();
+        const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
+
+        if (!emailSent) {
+            return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
+        }
+
+        const saltRounds = Number(process.env.SALT_ROUNDS);
+        const hashedPassword = bcrypt.hashSync(password, saltRounds);
+
+        tempUsers[email] = {
+            name,
+            email,
+            hashedPassword,
+            newRole,
+            verificationCode,
+            expiresAt: Date.now() + 5 * 60 * 1000,
+            isManagerRegistration: true,
+        };
+
+        return handleResponse(res, 200, { success: true, message: "Usuário temporariamente cadastrado.", details: "Verifique o e-mail para o código de verificação." });
+
+    } catch (error) {
+        console.error(error);
+        return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado. Tente novamente mais tarde." });
     }
+}
 
     static async verifyUser(req, res) {
         const { email, code } = req.body;
