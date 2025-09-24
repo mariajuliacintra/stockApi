@@ -22,6 +22,7 @@ const upload = require('../services/upload');
 const uploadExcel = require('../services/uploadExcel');
 
 router.post("/user/register", userController.registerUser);
+router.post("/user/register/manager", verifyJWT, authorizeManager ,userController.registerUserByManager);
 router.post("/user/verify-register", userController.verifyUser);
 router.post("/user/login", userController.loginUser);
 router.put("/user/:idUser", verifyJWT, userController.updateUser);
