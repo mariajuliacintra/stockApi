@@ -9,8 +9,8 @@ const tempUsers = {};
 module.exports = class UserController {
     static async registerUser(req, res) {
         const { name, email, password } = req.body;
-
         const userValidationError = validateUser.validateUser(req.body);
+
         if (userValidationError) {
             return handleResponse(res, 400, { success: false, ...userValidationError });
         }
@@ -70,6 +70,56 @@ module.exports = class UserController {
         }
     }
 
+    static async registerUserByManager(req, res) {
+        const { name, email, password, role: newRole } = req.body;
+        const { role } = req;
+
+        if (role !== "manager") {
+            return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Apenas gerentes podem cadastrar novos usuários." });
+        }
+
+        const userValidationError = validateUser.validateUser(req.body);
+        if (userValidationError) {
+            return handleResponse(res, 400, { success: false, ...userValidationError });
+        }
+
+        if (!newRole || !["user", "manager"].includes(newRole)) {
+            return handleResponse(res, 400, { success: false, error: "A função (role) é obrigatória e deve ser 'user' ou 'manager'." });
+        }
+
+        try {
+            const userExists = await findUserByEmail(email);
+            if (userExists) {
+                return handleResponse(res, 409, { success: false, error: "E-mail já cadastrado", details: "Este e-mail já está sendo utilizado por outro usuário." });
+            }
+
+            const verificationCode = generateRandomCode();
+            const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "mailVerification.html");
+
+            if (!emailSent) {
+                return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
+            }
+
+            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const hashedPassword = bcrypt.hashSync(password, saltRounds);
+
+            tempUsers[email] = {
+                name,
+                email,
+                hashedPassword,
+                newRole,
+                verificationCode,
+                expiresAt: Date.now() + 5 * 60 * 1000,
+                isManagerRegistration: true,
+            };
+
+            return handleResponse(res, 200, { success: true, message: "Usuário temporariamente cadastrado.", details: "Verifique o e-mail para o código de verificação." });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado. Tente novamente mais tarde." });
+        }
+    }
+
     static async verifyUser(req, res) {
         const { email, code } = req.body;
 
@@ -88,11 +138,9 @@ module.exports = class UserController {
                 const { idUser, name, hashedPassword } = storedUser;
                 const reactivateQuery = `UPDATE user SET name = ?, hashedPassword = ?, isActive = TRUE WHERE idUser = ?`;
                 await queryAsync(reactivateQuery, [name, hashedPassword, idUser]);
-
                 const user = await findUserById(idUser);
                 const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
                 delete tempUsers[email];
-
                 const isManager = user.role === "manager";
 
                 return handleResponse(res, 200, {
@@ -104,19 +152,39 @@ module.exports = class UserController {
                 });
             }
 
+            if (storedUser.isManagerRegistration) {
+                const { name, email, hashedPassword, newRole } = storedUser;
+                const queryInsert = `INSERT INTO user (name, email, hashedPassword, role, isActive) VALUES (?, ?, ?, ?, TRUE)`;
+                await queryAsync(queryInsert, [name, email, hashedPassword, newRole]);
+                const user = await findUserByEmail(email);
+
+                if (!user) {
+                    return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário não pôde ser localizado após o cadastro." });
+                }
+
+                delete tempUsers[email];
+
+                return handleResponse(res, 201, {
+                    success: true,
+                    message: "Usuário cadastrado com sucesso pelo gerente.",
+                    details: "A conta foi criada e ativada.",
+                    data: user,
+                    arrayName: "user"
+                });
+            }
+
             const { name, hashedPassword } = storedUser;
             const queryInsert = `INSERT INTO user (name, email, hashedPassword, role) VALUES (?, ?, ?, "user")`;
             const valuesInsert = [name, email, hashedPassword];
             await queryAsync(queryInsert, valuesInsert);
-
             const user = await findUserByEmail(email);
+
             if (!user) {
                 return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário não pôde ser localizado após o cadastro." });
             }
 
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
             delete tempUsers[email];
-
             const isManager = user.role === "manager";
 
             return handleResponse(res, 200, {
@@ -134,8 +202,8 @@ module.exports = class UserController {
 
     static async loginUser(req, res) {
         const { email, password } = req.body;
-
         const loginValidationError = validateUser.validateLogin(req.body);
+
         if (loginValidationError) {
             return handleResponse(res, 400, { success: false, ...loginValidationError });
         }
@@ -157,7 +225,6 @@ module.exports = class UserController {
             }
 
             const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
-
             const isManager = user.role === "manager";
 
             return handleResponse(res, 200, {
@@ -178,7 +245,6 @@ module.exports = class UserController {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 10;
             const offset = (page - 1) * limit;
-
             const countQuery = "SELECT COUNT(*) as count FROM user WHERE isActive = TRUE";
             const [countResult] = await queryAsync(countQuery);
             const totalItems = countResult.count;
@@ -211,103 +277,103 @@ module.exports = class UserController {
         }
     }
 
-static async updateUser(req, res) {
-    const { idUser } = req.params;
-    const { name, email, password, role: newRole } = req.body;
-    const { role, userId } = req;
+    static async updateUser(req, res) {
+        const { idUser } = req.params;
+        const { name, email, password, role: newRole } = req.body;
+        const { role, userId } = req;
 
-    if (role !== "manager" && userId != idUser) {
-        return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar este usuário." });
-    }
-
-    const updateValidationError = validateUser.validateUpdate(req.body);
-    if (updateValidationError) {
-        return handleResponse(res, 400, { success: false, ...updateValidationError });
-    }
-
-    try {
-        const userToUpdate = await findUserById(idUser);
-        if (!userToUpdate) {
-            return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário que você está tentando atualizar não existe." });
+        if (role !== "manager" && userId != idUser) {
+            return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar este usuário." });
         }
 
-        if (email && email !== userToUpdate.email) {
-            const emailValidationError = await validateUser.validateEmail(email);
-            if (emailValidationError) {
-                return handleResponse(res, 400, { success: false, ...emailValidationError });
+        const updateValidationError = validateUser.validateUpdate(req.body);
+        if (updateValidationError) {
+            return handleResponse(res, 400, { success: false, ...updateValidationError });
+        }
+
+        try {
+            const userToUpdate = await findUserById(idUser);
+            if (!userToUpdate) {
+                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário que você está tentando atualizar não existe." });
             }
 
-            const verificationCode = generateRandomCode();
-            const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "updateVerification.html");
+            if (email && email !== userToUpdate.email) {
+                const emailValidationError = await validateUser.validateEmail(email);
+                if (emailValidationError) {
+                    return handleResponse(res, 400, { success: false, ...emailValidationError });
+                }
 
-            if (!emailSent) {
-                return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
+                const verificationCode = generateRandomCode();
+                const emailSent = await mailSender.sendVerificationEmail(email, verificationCode, "updateVerification.html");
+
+                if (!emailSent) {
+                    return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
+                }
+
+                const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword;
+
+                tempUsers[email] = {
+                    idUser,
+                    name: name || userToUpdate.name,
+                    oldEmail: userToUpdate.email,
+                    newEmail: email,
+                    hashedPassword,
+                    newRole: newRole || userToUpdate.role,
+                    verificationCode,
+                    expiresAt: Date.now() + 5 * 60 * 1000,
+                };
+
+                return handleResponse(res, 200, { success: true, message: "Verificação de e-mail necessária.", details: "Um código foi enviado para o novo e-mail para confirmar a alteração.", data: { requiresEmailVerification: true }, arrayName: "data" });
             }
 
-            const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword;
+            const fieldsToUpdate = [];
+            const values = [];
 
-            tempUsers[email] = {
-                idUser,
-                name: name || userToUpdate.name,
-                oldEmail: userToUpdate.email,
-                newEmail: email,
-                hashedPassword,
-                newRole: newRole || userToUpdate.role,
-                verificationCode,
-                expiresAt: Date.now() + 5 * 60 * 1000,
-            };
-
-            return handleResponse(res, 200, { success: true, message: "Verificação de e-mail necessária.", details: "Um código foi enviado para o novo e-mail para confirmar a alteração.", data: { requiresEmailVerification: true }, arrayName: "data" });
-        }
-
-        const fieldsToUpdate = [];
-        const values = [];
-
-        if (name) {
-            fieldsToUpdate.push("name = ?");
-            values.push(name);
-        }
-
-        if (password) {
-            const saltRounds = Number(process.env.SALT_ROUNDS);
-            const hashedPassword = bcrypt.hashSync(password, saltRounds);
-            fieldsToUpdate.push("hashedPassword = ?");
-            values.push(hashedPassword);
-        }
-
-        if (newRole) {
-            if (role === "manager") {
-                fieldsToUpdate.push("role = ?");
-                values.push(newRole);
-            } else {
-                return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar a função do usuário." });
+            if (name) {
+                fieldsToUpdate.push("name = ?");
+                values.push(name);
             }
+
+            if (password) {
+                const saltRounds = Number(process.env.SALT_ROUNDS);
+                const hashedPassword = bcrypt.hashSync(password, saltRounds);
+                fieldsToUpdate.push("hashedPassword = ?");
+                values.push(hashedPassword);
+            }
+
+            if (newRole) {
+                if (role === "manager") {
+                    fieldsToUpdate.push("role = ?");
+                    values.push(newRole);
+                } else {
+                    return handleResponse(res, 403, { success: false, error: "Não autorizado", details: "Você não tem permissão para alterar a função do usuário." });
+                }
+            }
+
+            if (fieldsToUpdate.length === 0) {
+                return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualizar foi fornecido.", details: "Por favor, forneça 'name', 'email', 'password' ou 'role' para atualizar." });
+            }
+
+            const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
+            values.push(idUser);
+
+            await queryAsync(updateQuery, values);
+            const updatedUser = await findUserById(idUser);
+            await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
+
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Usuário atualizado com sucesso.",
+                details: "As informações do seu perfil foram modificadas.",
+                data: updatedUser,
+                arrayName: "user"
+            });
+
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a atualização." });
         }
-
-        if (fieldsToUpdate.length === 0) {
-            return handleResponse(res, 400, { success: false, error: "Nenhum campo para atualizar foi fornecido.", details: "Por favor, forneça 'name', 'email', 'password' ou 'role' para atualizar." });
-        }
-
-        const updateQuery = `UPDATE user SET ${fieldsToUpdate.join(", ")} WHERE idUser = ?`;
-        values.push(idUser);
-
-        await queryAsync(updateQuery, values);
-        const updatedUser = await findUserById(idUser);
-        await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
-
-        return handleResponse(res, 200, {
-            success: true,
-            message: "Usuário atualizado com sucesso.",
-            details: "As informações do seu perfil foram modificadas.",
-            data: updatedUser,
-            arrayName: "user"
-        });
-
-    } catch (error) {
-        console.error(error);
-        return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a atualização." });
     }
-}
 
     static async verifyUpdate(req, res) {
         const { email, code } = req.body;
@@ -326,7 +392,6 @@ static async updateUser(req, res) {
             const { idUser, name, newEmail, hashedPassword } = storedUpdate;
             const updateQuery = `UPDATE user SET name = ?, email = ?, hashedPassword = ? WHERE idUser = ?`;
             await queryAsync(updateQuery, [name, newEmail, hashedPassword, idUser]);
-
             const updatedUser = await findUserById(idUser);
             delete tempUsers[email];
             await mailSender.sendProfileUpdatedEmail(updatedUser.email, updatedUser);
@@ -344,47 +409,46 @@ static async updateUser(req, res) {
         }
     }
 
-static async deleteUser(req, res) {
-    const { idUser } = req.params;
-    const { role, userId } = req;
+    static async deleteUser(req, res) {
+        const { idUser } = req.params;
+        const { role, userId } = req;
 
-    if (role !== "manager" && userId != idUser) {
-        return handleResponse(res, 403, { 
-            success: false, 
-            error: "Não autorizado", 
-            details: "Você não tem permissão para desativar este usuário." 
-        });
-    }
-
-    try {
-        const userToDelete = await findUserById(idUser);
-        if (!userToDelete) {
-            return handleResponse(res, 404, { 
-                success: false, 
-                error: "Usuário não encontrado ou já desativado", 
-                details: "O usuário não existe ou já foi desativado anteriormente." 
+        if (role !== "manager" && userId != idUser) {
+            return handleResponse(res, 403, {
+                success: false,
+                error: "Não autorizado",
+                details: "Você não tem permissão para desativar este usuário."
             });
         }
 
-        const updateQuery = `UPDATE user SET isActive = FALSE WHERE idUser = ?`;
-        await queryAsync(updateQuery, [idUser]);
+        try {
+            const userToDelete = await findUserById(idUser);
+            if (!userToDelete) {
+                return handleResponse(res, 404, {
+                    success: false,
+                    error: "Usuário não encontrado ou já desativado",
+                    details: "O usuário não existe ou já foi desativado anteriormente."
+                });
+            }
 
-        await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
+            const updateQuery = `UPDATE user SET isActive = FALSE WHERE idUser = ?`;
+            await queryAsync(updateQuery, [idUser]);
+            await mailSender.sendDeletionEmail(userToDelete.email, userToDelete.name);
 
-        return handleResponse(res, 200, {
-            success: true,
-            message: "Usuário desativado com sucesso.",
-            details: "Sua conta foi desativada e um e-mail de confirmação foi enviado."
-        });
-    } catch (error) {
-        console.error(error);
-        return handleResponse(res, 500, { 
-            success: false, 
-            error: "Erro Interno do Servidor", 
-            details: "Ocorreu um problema inesperado durante a desativação do usuário." 
-        });
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Usuário desativado com sucesso.",
+                details: "Sua conta foi desativada e um e-mail de confirmação foi enviado."
+            });
+        } catch (error) {
+            console.error(error);
+            return handleResponse(res, 500, {
+                success: false,
+                error: "Erro Interno do Servidor",
+                details: "Ocorreu um problema inesperado durante a desativação do usuário."
+            });
+        }
     }
-}
 
     static async verifyRecoveryPassword(req, res) {
         const { email } = req.body;
@@ -457,7 +521,6 @@ static async deleteUser(req, res) {
 
             const updateQuery = `UPDATE user SET hashedPassword = ? WHERE email = ?`;
             await queryAsync(updateQuery, [hashedPassword, email]);
-
             delete tempUsers[email];
 
             return handleResponse(res, 200, {
