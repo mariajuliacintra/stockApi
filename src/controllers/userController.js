@@ -151,85 +151,99 @@ static async registerUserByManager(req, res) {
     }
 }
 
-    static async verifyUser(req, res) {
-        const { email, code } = req.body;
-
-        if (!email || !code) {
-            return handleResponse(res, 400, { success: false, error: "E-mail e código são obrigatórios.", details: "Os campos 'email' e 'code' não foram fornecidos." });
-        }
-
-        const storedUser = tempUsers[email];
-
-        if (!storedUser || storedUser.verificationCode !== code || Date.now() > storedUser.expiresAt) {
-            return handleResponse(res, 401, { success: false, error: "Código de verificação inválido ou expirado.", details: "O código fornecido não corresponde ou o tempo de validade expirou." });
-        }
-
-        try {
-            if (storedUser.reactivating) {
-                const { idUser, name, hashedPassword } = storedUser;
-                const reactivateQuery = `UPDATE user SET name = ?, hashedPassword = ?, isActive = TRUE WHERE idUser = ?`;
-                await queryAsync(reactivateQuery, [name, hashedPassword, idUser]);
-                const user = await findUserById(idUser);
+static async verifyUser(req, res) {
+            const { email, code } = req.body;
+    
+            if (!email || !code) {
+                return handleResponse(res, 400, { success: false, error: "E-mail e código são obrigatórios.", details: "Os campos 'email' e 'code' não foram fornecidos." });
+            }
+    
+            const storedUser = tempUsers[email];
+    
+            if (!storedUser || storedUser.verificationCode !== code || Date.now() > storedUser.expiresAt) {
+                return handleResponse(res, 401, { success: false, error: "Código de verificação inválido ou expirado.", details: "O código fornecido não corresponde ou o tempo de validade expirou." });
+            }
+    
+            try {
+                // FLUXO 1: Reativação de conta inativa (pode ser pelo próprio usuário ou pelo gerente)
+                if (storedUser.reactivating) {
+                    const { idUser, name, hashedPassword } = storedUser;
+                    
+                    // Define a role para reativação:
+                    // Se for reativação pelo gerente (isManagerRegistration), usa o newRole, 
+                    // se não for, assume a lógica padrão do registerUser (geralmente "user").
+                    const roleToReactivate = storedUser.isManagerRegistration ? storedUser.newRole : "user";
+                    
+                    // CORREÇÃO: Inclui a coluna 'role' no UPDATE
+                    const reactivateQuery = `UPDATE user SET name = ?, hashedPassword = ?, role = ?, isActive = TRUE WHERE idUser = ?`;
+                    
+                    // CORREÇÃO: Passa o roleToReactivate como valor
+                    await queryAsync(reactivateQuery, [name, hashedPassword, roleToReactivate, idUser]); 
+                    
+                    const user = await findUserById(idUser);
+                    const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
+                    delete tempUsers[email];
+                    const isManager = user.role === "manager";
+    
+                    return handleResponse(res, 200, {
+                        success: true,
+                        message: "Conta reativada com sucesso!",
+                        details: "O login foi realizado automaticamente.",
+                        data: { ...user, isManager, token, auth: true },
+                        arrayName: "user"
+                    });
+                }
+    
+                // FLUXO 2: Cadastro de novo usuário pelo gerente
+                if (storedUser.isManagerRegistration) {
+                    const { name, email, hashedPassword, newRole } = storedUser;
+                    // O novoRole definido pelo gerente é usado
+                    const queryInsert = `INSERT INTO user (name, email, hashedPassword, role, isActive) VALUES (?, ?, ?, ?, TRUE)`;
+                    await queryAsync(queryInsert, [name, email, hashedPassword, newRole]);
+                    const user = await findUserByEmail(email);
+    
+                    if (!user) {
+                        return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário não pôde ser localizado após o cadastro." });
+                    }
+    
+                    delete tempUsers[email];
+    
+                    return handleResponse(res, 201, {
+                        success: true,
+                        message: "Usuário cadastrado com sucesso pelo gerente.",
+                        details: "A conta foi criada e ativada.",
+                        data: user,
+                        arrayName: "user"
+                    });
+                }
+    
+                // FLUXO 3: Cadastro de novo usuário pelo próprio usuário (fluxo padrão)
+                const { name, hashedPassword } = storedUser;
+                const queryInsert = `INSERT INTO user (name, email, hashedPassword, role) VALUES (?, ?, ?, "user")`;
+                const valuesInsert = [name, email, hashedPassword];
+                await queryAsync(queryInsert, valuesInsert);
+                const user = await findUserByEmail(email);
+    
+                if (!user) {
+                    return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário não pôde ser localizado após o cadastro." });
+                }
+    
                 const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
                 delete tempUsers[email];
                 const isManager = user.role === "manager";
-
+    
                 return handleResponse(res, 200, {
                     success: true,
-                    message: "Conta reativada com sucesso!",
+                    message: "Cadastro bem-sucedido",
                     details: "O login foi realizado automaticamente.",
                     data: { ...user, isManager, token, auth: true },
                     arrayName: "user"
                 });
+            } catch (error) {
+                console.error(error);
+                return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a verificação." });
             }
-
-            if (storedUser.isManagerRegistration) {
-                const { name, email, hashedPassword, newRole } = storedUser;
-                const queryInsert = `INSERT INTO user (name, email, hashedPassword, role, isActive) VALUES (?, ?, ?, ?, TRUE)`;
-                await queryAsync(queryInsert, [name, email, hashedPassword, newRole]);
-                const user = await findUserByEmail(email);
-
-                if (!user) {
-                    return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário não pôde ser localizado após o cadastro." });
-                }
-
-                delete tempUsers[email];
-
-                return handleResponse(res, 201, {
-                    success: true,
-                    message: "Usuário cadastrado com sucesso pelo gerente.",
-                    details: "A conta foi criada e ativada.",
-                    data: user,
-                    arrayName: "user"
-                });
-            }
-
-            const { name, hashedPassword } = storedUser;
-            const queryInsert = `INSERT INTO user (name, email, hashedPassword, role) VALUES (?, ?, ?, "user")`;
-            const valuesInsert = [name, email, hashedPassword];
-            await queryAsync(queryInsert, valuesInsert);
-            const user = await findUserByEmail(email);
-
-            if (!user) {
-                return handleResponse(res, 404, { success: false, error: "Usuário não encontrado", details: "O usuário não pôde ser localizado após o cadastro." });
-            }
-
-            const token = createToken({ idUser: user.idUser, email: user.email, role: user.role });
-            delete tempUsers[email];
-            const isManager = user.role === "manager";
-
-            return handleResponse(res, 200, {
-                success: true,
-                message: "Cadastro bem-sucedido",
-                details: "O login foi realizado automaticamente.",
-                data: { ...user, isManager, token, auth: true },
-                arrayName: "user"
-            });
-        } catch (error) {
-            console.error(error);
-            return handleResponse(res, 500, { success: false, error: "Erro Interno do Servidor", details: "Ocorreu um problema inesperado durante a verificação." });
         }
-    }
 
     static async loginUser(req, res) {
         const { email, password } = req.body;
