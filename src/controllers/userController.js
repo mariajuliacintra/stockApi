@@ -277,6 +277,47 @@ module.exports = class UserController {
         }
     }
 
+    static async getUserById(req, res) {
+    const { idUser } = req.params;
+    const { userId } = req;
+
+    if (userId != idUser) {
+        return handleResponse(res, 403, { 
+            success: false, 
+            error: "Acesso negado", 
+            details: "Você só pode visualizar seu próprio perfil." 
+        });
+    }
+
+    try {
+        const user = await findUserById(idUser);
+        
+        if (!user) {
+            return handleResponse(res, 404, {
+                success: false,
+                error: "Usuário não encontrado",
+                details: "O usuário que você está tentando buscar não existe."
+            });
+        }
+
+        delete user.hashedPassword;
+        
+        return handleResponse(res, 200, {
+            success: true,
+            message: "Dados do usuário obtidos com sucesso.",
+            data: user,
+            arrayName: "user"
+        });
+    } catch (error) {
+        console.error(error);
+        return handleResponse(res, 500, {
+            success: false,
+            error: "Erro Interno do Servidor",
+            details: "Ocorreu um problema inesperado ao buscar o usuário."
+        });
+    }
+}
+
     static async updateUser(req, res) {
         const { idUser } = req.params;
         const { name, email, password, role: newRole } = req.body;
