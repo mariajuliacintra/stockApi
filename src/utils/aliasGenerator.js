@@ -1,6 +1,6 @@
 const { GoogleGenAI } = require('@google/genai');
 
-const ai = new GoogleGenAI(process.env.GEMINIAPIKEY);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINIAPIKEY });
 
 async function aliasGenerator(itemName) {
     if (!itemName) return [];
@@ -17,9 +17,9 @@ async function aliasGenerator(itemName) {
        Não inclua nenhuma outra explicação, introdução ou formatação (como aspas, traços, etc.).
 
     Exemplos de entrada e saída (para fins de contexto):
-    - "Martelo Unha" -> "Martelo de Unha", "Martelo para retirar pregos"
-    - "Furadeira Impacto" -> "Martelete", "Furadeira com impacto"
-    - "Óleo Lubrificante" -> "Óleo de Máquina", "Óleo para lubrificação"
+    - "Martelo Unha" -> "Martelo de Unha"
+    - "Furadeira Impacto" -> "Martelete", "Furadeira de Impacto"
+    - "Óleo Lubrificante" -> "Óleo de Máquina", "Óleo para Lubrificação"
 
     Agora, gere os aliases para o seguinte nome de produto: "${itemName}"
     `;

@@ -1,5 +1,5 @@
 const { queryAsync, handleResponse } = require("../utils/functions");
-const { aliasGenerator } = require('../utils/aliasGenerator');
+const { aliasGenerator } = require("../utils/aliasGenerator");
 const validateItem = require("../services/validateItem");
 const fs = require("fs").promises;
 
@@ -332,7 +332,6 @@ module.exports = class ItemController {
     const {
       sapCode,
       name,
-      aliases,
       minimumStock,
       quantity,
       expirationDate,
@@ -371,14 +370,17 @@ module.exports = class ItemController {
         });
       }
 
+      const generatedAliasesArray = await aliasGenerator(name);
+      const aliasesToSave = generatedAliasesArray.join(", ");
+
       const insertItemQuery = `
-            INSERT INTO item (sapCode, name, aliases, brand, description, minimumStock, fkIdCategory)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `;
+      INSERT INTO item (sapCode, name, aliases, brand, description, minimumStock, fkIdCategory)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
       const itemValues = [
         sapCode,
         name,
-        aliases,
+        aliasesToSave,
         itemData.brand,
         itemData.description,
         minimumStock,
@@ -397,17 +399,17 @@ module.exports = class ItemController {
       }
 
       const getLotNumberQuery = `
-            SELECT COALESCE(MAX(lotNumber), 0) + 1 AS newLotNumber
-            FROM lots
-            WHERE fkIdItem = ?
-        `;
+      SELECT COALESCE(MAX(lotNumber), 0) + 1 AS newLotNumber
+      FROM lots
+      WHERE fkIdItem = ?
+    `;
       const [lotResult] = await queryAsync(getLotNumberQuery, [fkIdItem]);
       const lotNumber = lotResult.newLotNumber;
 
       const insertLotQuery = `
-            INSERT INTO lots (lotNumber, quantity, expirationDate, fkIdLocation, fkIdItem)
-            VALUES (?, ?, ?, ?, ?)
-        `;
+      INSERT INTO lots (lotNumber, quantity, expirationDate, fkIdLocation, fkIdItem)
+      VALUES (?, ?, ?, ?, ?)
+    `;
       const lotValues = [
         lotNumber,
         quantity,
@@ -419,9 +421,9 @@ module.exports = class ItemController {
       const newLotId = newLotResult.insertId;
 
       const insertTransactionQuery = `
-            INSERT INTO transactions (fkIdUser, fkIdLot, actionDescription, quantityChange, oldQuantity, newQuantity)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `;
+      INSERT INTO transactions (fkIdUser, fkIdLot, actionDescription, quantityChange, oldQuantity, newQuantity)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
       const transactionValues = [
         fkIdUser,
         newLotId,
@@ -444,6 +446,7 @@ module.exports = class ItemController {
           sapCode: sapCode,
           lotNumber: lotNumber,
           lotId: newLotId,
+          aliases: generatedAliasesArray,
         },
         arrayName: "data",
       });
