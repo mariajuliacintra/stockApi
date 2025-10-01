@@ -125,7 +125,7 @@ INSERT INTO location (place, code) VALUES
 
 INSERT INTO user (name, email, hashedPassword, role) VALUES
 ('João Silva', 'joao.silva@sp.senai.br', '$2a$12$pUpODOURw.nIEgqGiT4sNuPPoesLu.9rg4dTyikxPGOiyMQUDzVZu', 'manager'),
-('Vinicius Fogaça', 'vfogacacintra@gmail.com', '$2a$12$Dgp7DDOLi91NJYR0abt.yuwSy7dDHDuS3wp/QRw02rs06HqDMr8WS', 'manager'),
+('Vinicius Fogaça', 'vinicius.f.cintra@aluno.senai.br', '$2a$12$ppohx.brUJB2QYW5Xd/xTOefsNrDYspO7XgAhGSLpht4vsirIodV.', 'manager'),
 ('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
 
 INSERT INTO item (idItem, name, aliases, brand, description, sapCode, minimumStock, fkIdCategory, fkIdImage) VALUES
