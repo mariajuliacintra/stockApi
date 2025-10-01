@@ -1,8 +1,7 @@
 const validateUser = require("../services/validateUser");
 const mailSender = require("../services/mail/mailSender");
 const { queryAsync, createToken, generateRandomCode, handleResponse } = require("../utils/functions");
-// Adicionando findUserByEmailAllStates e validateEmailAllStates
-const { findUserByEmail, findUserById, findUserByEmailAllStates } = require("../utils/querys"); 
+const { findUserByEmail, findUserById } = require("../utils/querys"); 
 const bcrypt = require("bcrypt");
 
 const tempUsers = {};
@@ -475,15 +474,13 @@ module.exports = class UserController {
                 return handleResponse(res, 404, { success: false, error: "Usuário não encontrado.", details: "O usuário com o ID especificado na atualização temporária não existe." });
             }
 
-            // Verifica se o usuário original está desativado (nova verificação)
             if (!originalUser.isActive) {
                 delete tempUsers[email];
                 return handleResponse(res, 403, { success: false, error: "Atualização não permitida.", details: "O usuário que você está tentando atualizar está desativado." });
             }
 
             if (newEmail && newEmail !== originalUser.email) {
-                // CORREÇÃO: findUserByEmailAllStates está sendo usado
-                const existingUserWithNewEmail = await findUserByEmailAllStates(newEmail);
+                const existingUserWithNewEmail = await validateUser.validateEmailAllStates(newEmail);
 
                 if (existingUserWithNewEmail && existingUserWithNewEmail.idUser !== idUser) {
                     delete tempUsers[email];
