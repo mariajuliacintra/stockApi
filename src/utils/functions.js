@@ -1,6 +1,6 @@
 const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
-const tokenSecret = process.env.SECRET;
+const tokenSecret = process.env.SECRETKEY;
 
 const handleResponse = (res, status, { success, message, error, details, data, arrayName }) => {
   if (success) {

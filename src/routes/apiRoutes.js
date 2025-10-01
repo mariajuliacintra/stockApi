@@ -18,7 +18,8 @@ const ImportControllerReports = require("../controllers/importControllerReports"
 
 const verifyJWT = require("../middlewares/verifyJWT");
 const authorizeManager = require("../middlewares/authorizeManager");
-const upload = require('../services/upload');
+
+const uploadImage = require('../services/uploadImage');
 const uploadExcel = require('../services/uploadExcel');
 
 router.post("/user/register", userController.registerUser);
@@ -50,7 +51,7 @@ router.put("/item/information/:idItem", verifyJWT, itemController.updateItemInfo
 router.delete("/item/:idItem", verifyJWT, authorizeManager, itemController.deleteItem);
 
 // Novas rotas para a gestão de imagens de itens
-router.post("/item/image/:idItem", verifyJWT, upload.single('image'), itemController.insertImage);
+router.post("/item/image/:idItem", verifyJWT, uploadImage.single('image'), itemController.insertImage);
 router.delete("/item/image/:idItem", verifyJWT, itemController.deleteImage);
 
 // Rotas para a criação e gerenciamento de lotes
