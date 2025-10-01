@@ -1,4 +1,8 @@
-CREATE DATABASE IF NOT EXISTS stock;
+CREATE DATABASE IF NOT EXISTS stock
+
+CHARACTER SET utf8mb4 
+COLLATE utf8mb4_unicode_ci;
+
 USE stock;
 
 DROP TABLE IF EXISTS transactions;
@@ -139,11 +143,11 @@ INSERT INTO itemSpec (fkIdItem, fkIdTechnicalSpec, specValue) VALUES
 (1, 1, '500g'),
 (1, 8, 'Madeira e Aço'),
 (2, 7, 'Preta'),
-(2, 10, '20m'),
+(2, 4, '20m'),
 (3, 9, '400ml'),
 (3, 7, 'Amarelo'),
 (4, 2, '1.5V'),
-(5, 10, '1L');
+(5, 9, '1L');
 
 INSERT INTO lots (idLot, lotNumber, quantity, expirationDate, fkIdLocation, fkIdItem) VALUES
 (1, 1, 15.0, NULL, 1, 1),
