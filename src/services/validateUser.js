@@ -50,6 +50,35 @@ const findUserByEmailAndActiveStatus = async (email, isActive) => {
     }
 };
 
+const findUserByEmailAllStates = async function (email) {
+    try {
+        let query = "SELECT idUser FROM user WHERE email = ?";
+        const values = [email];
+        const results = await queryAsync(query, values);
+        return results.length > 0 ? results[0] : null;
+    } catch (err) {
+        console.error(err);
+        return null;
+    }
+};
+
+const validateEmailAllStates = async function (email, currentUserId) {
+    try {
+        const existingUser = await findUserByEmailAllStates(email);
+        
+        if (existingUser && existingUser.idUser != currentUserId) {
+            return {
+                error: "O Email já está vinculado a outro usuário",
+                details: "Este endereço de e-mail já está em uso por outra conta (ativa ou desativada)."
+            };
+        }
+        return null;
+    } catch (err) {
+        console.error(err);
+        return { error: "Erro ao verificar email", details: "Ocorreu um problema ao consultar o banco de dados para verificar o e-mail." };
+    }
+};
+
 const validateLogin = function ({ email, password }) {
     if (!email || !password) {
         return { error: "Todos os campos devem ser preenchidos", details: "Os campos 'email' e 'password' são obrigatórios para o login." };
@@ -113,5 +142,6 @@ module.exports = {
     validateLogin,
     validateUpdate,
     validateRecovery,
-    findUserByEmailAndActiveStatus
+    findUserByEmailAndActiveStatus,
+    validateEmailAllStates
 };
