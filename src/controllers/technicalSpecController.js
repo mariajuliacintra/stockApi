@@ -74,6 +74,9 @@ module.exports = class TechnicalSpecController {
             return handleResponse(res, 200, { success: true, message: "Especificação técnica excluída com sucesso!" });
         } catch (error) {
             console.error("Erro ao excluir especificação técnica:", error);
+            if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+                return handleResponse(res, 409, { success: false, error: "Conflito de chave estrangeira", details: "Não é possível excluir esta especificação técnica pois ela está associada a um ou mais itens." });
+            }
             return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }

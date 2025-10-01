@@ -143,5 +143,6 @@ module.exports = {
     validateUpdate,
     validateRecovery,
     findUserByEmailAndActiveStatus,
+    findUserByEmailAllStates,
     validateEmailAllStates
 };

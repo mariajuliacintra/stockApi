@@ -1,4 +1,5 @@
 const { queryAsync, handleResponse } = require("../utils/functions");
+const { aliasGenerator } = require('../utils/aliasGenerator');
 const validateItem = require("../services/validateItem");
 const fs = require("fs").promises;
 
@@ -490,55 +491,90 @@ module.exports = class ItemController {
         });
       }
       await queryAsync("START TRANSACTION");
-      const countLotsQuery =
-        "SELECT COUNT(*) AS lotCount FROM lots WHERE fkIdItem = ?";
-      const [lotCountResult] = await queryAsync(countLotsQuery, [idItem]);
-      const lotCount = lotCountResult.lotCount;
-      if (lotCount !== 1) {
+      const getInfoQuery = `
+            SELECT 
+                l.idLot, l.quantity AS currentLotQuantity, i.quantity AS currentItemQuantity
+            FROM lots l
+            JOIN item i ON l.fkIdItem = i.idItem
+            WHERE l.fkIdItem = ?
+        `;
+      const lots = await queryAsync(getInfoQuery, [idItem]);
+
+      if (lots.length === 0) {
         await queryAsync("ROLLBACK");
-        const message =
-          lotCount === 0
-            ? "Item não encontrado ou não possui lotes."
-            : "Este item possui mais de um lote. Esta operação é apenas para itens com um único lote.";
         return handleResponse(res, 404, {
           success: false,
-          error: message,
+          error: "Item não encontrado ou não possui lotes.",
           details: "A operação de atualização de lote único falhou.",
         });
       }
-      const getLotInfoQuery =
-        "SELECT idLot, quantity AS currentQuantity FROM lots WHERE fkIdItem = ?";
-      const [lotInfo] = await queryAsync(getLotInfoQuery, [idItem]);
+
+      if (lots.length > 1) {
+        await queryAsync("ROLLBACK");
+        return handleResponse(res, 400, {
+          success: false,
+          error: "Este item possui mais de um lote.",
+          details:
+            "Esta operação é apenas para itens com um único lote. Use o endpoint de movimentação de lote se houver múltiplos.",
+        });
+      }
+
+      const lotInfo = lots[0];
       const idLot = lotInfo.idLot;
-      const currentQuantity = parseFloat(lotInfo.currentQuantity);
-      let newQuantity;
+      const currentLotQuantity = parseFloat(lotInfo.currentLotQuantity);
+      const currentItemQuantity = parseFloat(lotInfo.currentItemQuantity) || 0;
+      let newLotQuantity;
+      let newItemQuantity;
+      let quantityDifference;
+
       if (isAjust) {
-        newQuantity = quantityNum;
-        quantityChange = newQuantity - currentQuantity;
+        newLotQuantity = quantityNum;
+        quantityChange = newLotQuantity - currentLotQuantity;
         actionDescription = "AJUST";
+        newItemQuantity = currentItemQuantity + quantityChange;
       } else {
         if (quantityNum > 0) {
-          newQuantity = currentQuantity + quantityNum;
+          newLotQuantity = currentLotQuantity + quantityNum;
           quantityChange = quantityNum;
           actionDescription = "IN";
         } else {
           const quantityToRemove = Math.abs(quantityNum);
-          newQuantity = currentQuantity - quantityToRemove;
+          newLotQuantity = currentLotQuantity - quantityToRemove;
           quantityChange = -quantityToRemove;
           actionDescription = "OUT";
         }
-        if (newQuantity < 0) {
+        if (newLotQuantity < 0) {
           await queryAsync("ROLLBACK");
           return handleResponse(res, 400, {
             success: false,
             error: "A remoção de quantidade resultaria em um estoque negativo.",
+            details: `Quantidade atual: ${currentLotQuantity}. Tentativa de remover: ${Math.abs(
+              quantityNum
+            )}.`,
           });
         }
+
+        newItemQuantity = currentItemQuantity + quantityChange;
       }
-      newQuantity = parseFloat(newQuantity.toFixed(4));
+      if (newItemQuantity < 0 && actionDescription !== "AJUST") {
+        await queryAsync("ROLLBACK");
+        return handleResponse(res, 400, {
+          success: false,
+          error:
+            "A operação resultaria em uma quantidade total negativa para o item.",
+          details:
+            "Ajustes podem levar a valores negativos se necessário, mas IN/OUT não.",
+        });
+      }
+
+      newLotQuantity = parseFloat(newLotQuantity.toFixed(4));
+      newItemQuantity = parseFloat(newItemQuantity.toFixed(4));
       quantityChange = parseFloat(quantityChange.toFixed(4));
+
       const updateLotQuery = "UPDATE lots SET quantity = ? WHERE idLot = ?";
-      await queryAsync(updateLotQuery, [newQuantity, idLot]);
+      await queryAsync(updateLotQuery, [newLotQuantity, idLot]);
+      const updateItemQuery = "UPDATE item SET quantity = ? WHERE idItem = ?";
+      await queryAsync(updateItemQuery, [newItemQuantity, idItem]);
       const insertTransactionQuery = `
                 INSERT INTO transactions (fkIdUser, fkIdLot, actionDescription, quantityChange, oldQuantity, newQuantity)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -548,15 +584,15 @@ module.exports = class ItemController {
         idLot,
         actionDescription,
         quantityChange,
-        currentQuantity,
-        newQuantity,
+        currentLotQuantity,
+        newLotQuantity,
       ]);
       await queryAsync("COMMIT");
       return handleResponse(res, 200, {
         success: true,
-        message: "Quantidade do lote atualizada com sucesso!",
-        details: `A nova quantidade é ${newQuantity}.`,
-        data: { idLot, newQuantity },
+        message: "Quantidade do lote e do item atualizadas com sucesso!",
+        details: `A nova quantidade do lote é ${newLotQuantity}. A nova quantidade total do item é ${newItemQuantity}.`,
+        data: { idLot, newLotQuantity, newItemQuantity },
         arrayName: "data",
       });
     } catch (error) {
