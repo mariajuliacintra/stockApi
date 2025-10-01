@@ -22,7 +22,7 @@ module.exports = class LotController {
             const [item] = await queryAsync(itemQuery, [sapCode]);
             if (!item) {
                 await queryAsync("ROLLBACK");
-                return handleResponse(res, 404, { message: "Código SAP não encontrado. Não é possível criar um lote para um item inexistente." });
+                return handleResponse(res, 404, { success: false, error: "Código SAP não encontrado.", details: "Não é possível criar um lote para um item inexistente." });
             }
             const fkIdItem = item.idItem;
             const getLotNumberQuery = "SELECT COALESCE(MAX(lotNumber), 0) + 1 AS newLotNumber FROM lots WHERE fkIdItem = ?";
@@ -40,6 +40,9 @@ module.exports = class LotController {
         } catch (error) {
             console.error("Erro ao criar novo lote por SAP Code:", error);
             await queryAsync("ROLLBACK");
+            if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+                return handleResponse(res, 409, { success: false, error: "Conflito de chave estrangeira", details: "Localização (fkIdLocation) ou Usuário (fkIdUser) não encontrados." });
+            }
             return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
@@ -74,6 +77,9 @@ module.exports = class LotController {
         } catch (error) {
             console.error("Erro ao criar novo lote por ID do Item:", error);
             await queryAsync("ROLLBACK");
+            if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+                return handleResponse(res, 409, { success: false, error: "Conflito de chave estrangeira", details: "Item (idItem), Localização (fkIdLocation) ou Usuário (fkIdUser) não encontrados." });
+            }
             return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
@@ -119,6 +125,9 @@ module.exports = class LotController {
         } catch (error) {
             console.error("Erro ao atualizar a quantidade do lote:", error);
             await queryAsync("ROLLBACK");
+            if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+                return handleResponse(res, 409, { success: false, error: "Conflito de chave estrangeira", details: "Usuário (fkIdUser) não encontrado." });
+            }
             return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
@@ -154,6 +163,27 @@ module.exports = class LotController {
         } catch (error) {
             console.error("Erro ao atualizar informações do lote:", error);
             await queryAsync("ROLLBACK");
+            if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+                return handleResponse(res, 409, { success: false, error: "Conflito de chave estrangeira", details: "Localização (fkIdLocation) não encontrada." });
+            }
+            return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
+        }
+    }
+
+    static async deleteLot(req, res) {
+        const { idLot } = req.params;
+        try {
+            const query = "DELETE FROM lots WHERE idLot = ?";
+            const result = await queryAsync(query, [idLot]);
+            if (result.affectedRows === 0) {
+                return handleResponse(res, 404, { success: false, error: "Lote não encontrado.", details: "O idLot fornecido não existe." });
+            }
+            return handleResponse(res, 200, { success: true, message: "Lote excluído com sucesso! Transações relacionadas também foram excluídas." });
+        } catch (error) {
+            console.error("Erro ao excluir lote:", error);
+            if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+                return handleResponse(res, 409, { success: false, error: "Conflito de chave estrangeira", details: "Não é possível excluir este lote pois ele está referenciado em outro lugar." });
+            }
             return handleResponse(res, 500, { success: false, error: "Erro interno do servidor", details: error.message });
         }
     }
