@@ -5,19 +5,19 @@ const path = require('path');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS,
+        user: process.env.MAILUSERNAME,
+        pass: process.env.MAILPASSWORD,
     },
 });
 
 async function sendVerificationEmail(email, code, templateName) {
     try {
-        const templatePath = path.join(__dirname, 'templates', templateName);
+        const templatePath = path.join(__dirname, 'models', templateName);
         let htmlTemplate = await fs.readFile(templatePath, 'utf8');
         htmlTemplate = htmlTemplate.replace('{{code}}', code);
 
         const mailOptions = {
-            from: process.env.GMAIL_USER,
+            from: process.env.MAILUSERNAME,
             to: email,
             subject: 'Seu Código de Verificação',
             html: htmlTemplate,
@@ -33,13 +33,13 @@ async function sendVerificationEmail(email, code, templateName) {
 
 async function sendProfileUpdatedEmail(email, userData) {
     try {
-        const templatePath = path.join(__dirname, 'templates', 'profileUpdated.html');
+        const templatePath = path.join(__dirname, 'models', 'profileUpdated.html');
         let htmlTemplate = await fs.readFile(templatePath, 'utf8');
         htmlTemplate = htmlTemplate.replace('{{name}}', userData.name);
         htmlTemplate = htmlTemplate.replace('{{email}}', userData.email);
         
         const mailOptions = {
-            from: process.env.GMAIL_USER,
+            from: process.env.MAILUSERNAME,
             to: email,
             subject: 'Seu Perfil Foi Atualizado',
             html: htmlTemplate,
@@ -55,12 +55,12 @@ async function sendProfileUpdatedEmail(email, userData) {
 
 async function sendDeletionEmail(email, name) {
     try {
-        const templatePath = path.join(__dirname, 'templates', 'profileDeleted.html');
+        const templatePath = path.join(__dirname, 'models', 'profileDeleted.html');
         let htmlTemplate = await fs.readFile(templatePath, 'utf8');
         htmlTemplate = htmlTemplate.replace('{{name}}', name);
         
         const mailOptions = {
-            from: process.env.GMAIL_USER,
+            from: process.env.MAILUSERNAME,
             to: email,
             subject: 'Confirmação de Deleção de Conta',
             html: htmlTemplate,
@@ -76,12 +76,12 @@ async function sendDeletionEmail(email, name) {
 
 async function sendPasswordRecoveryEmail(email, code) {
     try {
-        const templatePath = path.join(__dirname, 'templates', 'passwordReset.html');
+        const templatePath = path.join(__dirname, 'models', 'passwordReset.html');
         let htmlTemplate = await fs.readFile(templatePath, 'utf8');
         htmlTemplate = htmlTemplate.replace('{{code}}', code);
         
         const mailOptions = {
-            from: process.env.GMAIL_USER,
+            from: process.env.MAILUSERNAME,
             to: email,
             subject: 'Recuperação de Senha',
             html: htmlTemplate,
@@ -97,7 +97,7 @@ async function sendPasswordRecoveryEmail(email, code) {
 
 async function sendWarningEmail(toEmails, subject, message, items) {
     try {
-        const templatePath = path.join(__dirname, 'templates', 'warningEmail.html');
+        const templatePath = path.join(__dirname, 'models', 'warningEmail.html');
         let htmlTemplate = await fs.readFile(templatePath, 'utf8');
 
         // Determina se o e-mail é sobre validade ou estoque mínimo.
@@ -163,7 +163,7 @@ async function sendWarningEmail(toEmails, subject, message, items) {
         htmlTemplate = htmlTemplate.replace('{{items}}', itemsHtml);
 
         const mailOptions = {
-            from: process.env.GMAIL_USER,
+            from: process.env.MAILUSERNAME,
             to: toEmails.join(', '),
             subject: subject,
             html: htmlTemplate,
