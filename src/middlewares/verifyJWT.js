@@ -9,7 +9,7 @@ async function verifyJWT(req, res, next) {
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.SECRET);
+        const decoded = jwt.verify(token, process.env.SECRETKEY);
         const query = `SELECT idUser, email, role FROM user WHERE idUser = ? AND isActive = TRUE`;
         const results = await queryAsync(query, [decoded.idUser]);
 
