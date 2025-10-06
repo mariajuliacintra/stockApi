@@ -25,7 +25,7 @@ module.exports = class UserController {
                     return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
                 }
 
-                const saltRounds = Number(process.env.SALT_ROUNDS);
+                const saltRounds = Number(process.env.SALTROUNDS);
                 const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
                 tempUsers[email] = {
@@ -52,7 +52,7 @@ module.exports = class UserController {
                 return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
             }
 
-            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const saltRounds = Number(process.env.SALTROUNDS);
             const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
             tempUsers[email] = {
@@ -98,7 +98,7 @@ module.exports = class UserController {
                     return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
                 }
 
-                const saltRounds = Number(process.env.SALT_ROUNDS);
+                const saltRounds = Number(process.env.SALTROUNDS);
                 const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
                 tempUsers[email] = {
@@ -127,7 +127,7 @@ module.exports = class UserController {
                 return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
             }
 
-            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const saltRounds = Number(process.env.SALTROUNDS);
             const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
             tempUsers[email] = {
@@ -384,7 +384,7 @@ module.exports = class UserController {
                     return handleResponse(res, 500, { success: false, error: "Erro ao enviar o e-mail de verificação.", details: "Falha na comunicação com o serviço de e-mail." });
                 }
 
-                const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALT_ROUNDS)) : userToUpdate.hashedPassword;
+                const hashedPassword = password ? bcrypt.hashSync(password, Number(process.env.SALTROUNDS)) : userToUpdate.hashedPassword;
 
                 tempUsers[email] = {
                     idUser,
@@ -409,7 +409,7 @@ module.exports = class UserController {
             }
 
             if (password) {
-                const saltRounds = Number(process.env.SALT_ROUNDS);
+                const saltRounds = Number(process.env.SALTROUNDS);
                 const hashedPassword = bcrypt.hashSync(password, saltRounds);
                 fieldsToUpdate.push("hashedPassword = ?");
                 values.push(hashedPassword);
@@ -641,7 +641,7 @@ module.exports = class UserController {
         }
 
         try {
-            const saltRounds = Number(process.env.SALT_ROUNDS);
+            const saltRounds = Number(process.env.SALTROUNDS);
             const hashedPassword = bcrypt.hashSync(password, saltRounds);
 
             const updateQuery = `UPDATE user SET hashedPassword = ? WHERE email = ?`;
