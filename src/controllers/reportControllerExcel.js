@@ -5,14 +5,26 @@ module.exports = class ReportControllerExcel {
     // 📦 Relatório Geral de Estoque
     static async generateGeneralReportExcel(req, res) {
         try {
+            // A query foi corrigida para usar JOINs e GROUP BY para obter:
+            // 1. O nome da categoria (c.categoryValue AS category)
+            // 2. A soma total da quantidade em todos os lotes (SUM(l.quantity) AS quantity)
+            // 3. Uma lista de todas as localizações para o item (GROUP_CONCAT)
             const items = await queryAsync(`
                 SELECT 
-                    idItem, name, category, brand, description, quantity, fkIdLocation
-                FROM item
+                    i.idItem, 
+                    i.name, 
+                    c.categoryValue AS category,       
+                    i.brand, 
+                    i.description, 
+                    COALESCE(SUM(l.quantity), 0) AS quantity,  /* COALESCE garante 0 se não houver lotes */
+                    GROUP_CONCAT(DISTINCT CONCAT(loc.place, ' - ', loc.code) SEPARATOR ', ') AS location
+                FROM item i
+                INNER JOIN category c ON i.fkIdCategory = c.idCategory /* JOIN obrigatório para nome da categoria */
+                LEFT JOIN lots l ON i.idItem = l.fkIdItem             /* LEFT JOIN para incluir itens sem lote */
+                LEFT JOIN location loc ON l.fkIdLocation = loc.idLocation /* JOIN para localização */
+                GROUP BY i.idItem, i.name, c.categoryValue, i.brand, i.description
+                ORDER BY i.idItem
             `);
-
-            const locations = await queryAsync(`SELECT idLocation, place, code FROM location`);
-            const locationMap = Object.fromEntries(locations.map(loc => [loc.idLocation, `${loc.place} - ${loc.code}`]));
 
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Estoque Geral");
@@ -24,14 +36,17 @@ module.exports = class ReportControllerExcel {
                 { header: "Marca", key: "brand", width: 20 },
                 { header: "Descrição", key: "description", width: 40 },
                 { header: "Quantidade", key: "quantity", width: 15 },
-                { header: "Local", key: "location", width: 25 },
+                { header: "Local(is)", key: "location", width: 35 },
             ];
 
             items.forEach(item => {
-                worksheet.addRow({
-                    ...item,
-                    location: locationMap[item.fkIdLocation] || "Sem localização",
-                });
+                worksheet.addRow(item);
+            });
+            
+            // Adiciona um estilo básico ao cabeçalho (opcional, mas melhora a visualização)
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6E6E6' } };
             });
 
             res.setHeader(
@@ -54,16 +69,25 @@ module.exports = class ReportControllerExcel {
     // ⚠️ Relatório de Estoque Baixo
     static async generateLowStockReportExcel(req, res) {
         try {
-            const lowStockLimit = 10;
-
+            // A query foi corrigida para usar o minimumStock da tabela item
             const items = await queryAsync(`
-                SELECT idItem, name, category, brand, quantity, fkIdLocation
-                FROM item
-                WHERE quantity <= ?
-            `, [lowStockLimit]);
-
-            const locations = await queryAsync(`SELECT idLocation, place, code FROM location`);
-            const locationMap = Object.fromEntries(locations.map(loc => [loc.idLocation, `${loc.place} - ${loc.code}`]));
+                SELECT 
+                    i.idItem, 
+                    i.name, 
+                    c.categoryValue AS category, 
+                    i.brand, 
+                    i.minimumStock,
+                    COALESCE(SUM(l.quantity), 0) AS currentQuantity,
+                    GROUP_CONCAT(DISTINCT CONCAT(loc.place, ' - ', loc.code) SEPARATOR ', ') AS location
+                FROM item i
+                INNER JOIN category c ON i.fkIdCategory = c.idCategory
+                LEFT JOIN lots l ON i.idItem = l.fkIdItem
+                LEFT JOIN location loc ON l.fkIdLocation = loc.idLocation
+                GROUP BY i.idItem, i.name, c.categoryValue, i.brand, i.minimumStock
+                /* Filtra itens onde a quantidade atual é <= estoque mínimo E o mínimo não é NULL */
+                HAVING currentQuantity <= i.minimumStock AND i.minimumStock IS NOT NULL
+                ORDER BY i.idItem
+            `);
 
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Estoque Baixo");
@@ -73,15 +97,18 @@ module.exports = class ReportControllerExcel {
                 { header: "Nome", key: "name", width: 30 },
                 { header: "Categoria", key: "category", width: 20 },
                 { header: "Marca", key: "brand", width: 20 },
-                { header: "Quantidade", key: "quantity", width: 15 },
-                { header: "Local", key: "location", width: 25 },
+                { header: "Estoque Mínimo", key: "minimumStock", width: 15 },
+                { header: "Quantidade Atual", key: "currentQuantity", width: 15 },
+                { header: "Local(is)", key: "location", width: 35 },
             ];
 
             items.forEach(item => {
-                worksheet.addRow({
-                    ...item,
-                    location: locationMap[item.fkIdLocation] || "Sem localização",
-                });
+                worksheet.addRow(item);
+            });
+
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6E6E6' } };
             });
 
             res.setHeader(
@@ -104,12 +131,20 @@ module.exports = class ReportControllerExcel {
     // 🔄 Relatório de Transações
     static async generateTransactionsReportExcel(req, res) {
         try {
+            // A query foi corrigida para usar JOINs e buscar o nome da categoria corretamente
             const transactions = await queryAsync(`
                 SELECT tr.idTransaction, tr.actionDescription, tr.quantityChange, tr.transactionDate,
-                       tr.fkIdItem, tr.fkIdUser, u.name AS userName, i.name AS itemName, i.category
+                       u.name AS userName, 
+                       i.name AS itemName, 
+                       c.categoryValue AS category, /* CORRIGIDO: Pega o nome da categoria do JOIN */
+                       l.lotNumber AS lotNumber,
+                       CONCAT(loc.place, ' - ', loc.code) AS location
                 FROM transactions tr
                 LEFT JOIN user u ON tr.fkIdUser = u.idUser
-                LEFT JOIN item i ON tr.fkIdItem = i.idItem
+                LEFT JOIN lots l ON tr.fkIdLot = l.idLot
+                LEFT JOIN item i ON l.fkIdItem = i.idItem
+                LEFT JOIN category c ON i.fkIdCategory = c.idCategory /* JOIN para categoria */
+                LEFT JOIN location loc ON l.fkIdLocation = loc.idLocation /* JOIN para localização */
                 ORDER BY tr.transactionDate DESC
             `);
 
@@ -119,6 +154,8 @@ module.exports = class ReportControllerExcel {
             worksheet.columns = [
                 { header: "ID", key: "idTransaction", width: 10 },
                 { header: "Item", key: "itemName", width: 30 },
+                { header: "Lote", key: "lotNumber", width: 10 },
+                { header: "Local", key: "location", width: 25 },
                 { header: "Categoria", key: "category", width: 20 },
                 { header: "Usuário", key: "userName", width: 25 },
                 { header: "Ação", key: "actionDescription", width: 15 },
@@ -127,7 +164,17 @@ module.exports = class ReportControllerExcel {
             ];
 
             transactions.forEach(tx => {
-                worksheet.addRow(tx);
+                // Formatação da data para melhor visualização no Excel
+                const transactionData = {
+                    ...tx,
+                    transactionDate: tx.transactionDate ? new Date(tx.transactionDate).toLocaleString('pt-BR') : 'N/A'
+                };
+                worksheet.addRow(transactionData);
+            });
+            
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6E6E6' } };
             });
 
             res.setHeader(
