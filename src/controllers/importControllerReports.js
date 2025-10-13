@@ -13,11 +13,11 @@ module.exports = class ImportControllerReports {
             const workbook = new ExcelJS.Workbook();
             await workbook.xlsx.readFile(filePath);
 
-            const worksheet = workbook.worksheets[0]; // pega a primeira aba
+            const worksheet = workbook.worksheets[0]; // primeira aba
             const validRows = [];
             const invalidRows = [];
 
-            // Mapeamento de nomes amigáveis para os nomes do banco de dados (sem "Apelidos")
+            // Mapeamento de nomes amigáveis -> nomes do banco
             const headerMap = {
                 "Nome do Item": "name",
                 "Marca": "brand",
@@ -26,46 +26,61 @@ module.exports = class ImportControllerReports {
                 "Estoque Mínimo": "minimumStock"
             };
 
-            // Pega cabeçalhos (linha 1)
-            const headers = worksheet.getRow(1).values.slice(1);
+            // Cabeçalhos amigáveis (linha 1)
+            const headers = worksheet.getRow(1).values.slice(1); // array com "Nome do Item", "Marca", ...
 
             worksheet.eachRow((row, rowNumber) => {
                 if (rowNumber === 1) return; // pula cabeçalho
-                const rowData = {};
 
-                // Mapeia os cabeçalhos amigáveis para os nomes do banco
+                // 1) ler valores usando cabeçalhos amigáveis
+                const friendlyData = {};
                 row.eachCell((cell, colNumber) => {
-                    const columnHeader = headers[colNumber - 1];
-                    const dbColumnName = headerMap[columnHeader];
-                    if (dbColumnName) {
-                        rowData[dbColumnName] = cell.value;
+                    const headerFriendly = headers[colNumber - 1];
+                    friendlyData[headerFriendly] = cell.value;
+                });
+
+                // 2) mapear para nomes do banco
+                const rowData = {};
+                Object.entries(headerMap).forEach(([friendly, dbName]) => {
+                    if (friendlyData[friendly] !== undefined && friendlyData[friendly] !== null && friendlyData[friendly] !== '') {
+                        rowData[dbName] = friendlyData[friendly];
                     }
                 });
 
-                // Validação dos campos obrigatórios
+                // 3) validações básicas
                 const missingFields = [];
                 ["name", "brand", "sapCode"].forEach(field => {
                     if (!rowData[field]) missingFields.push(field);
                 });
 
-                // Validação do sapCode com 9 dígitos
-                if (rowData.sapCode) {
+                // 4) validação sapCode: no máximo 9 dígitos (apenas números)
+                if (rowData.sapCode !== undefined && rowData.sapCode !== null && rowData.sapCode !== "") {
                     const sapStr = String(rowData.sapCode).trim();
-                    if (!/^\d{9}$/.test(sapStr)) {
-                        missingFields.push("sapCode (deve ter exatamente 9 dígitos)");
+                    // remover possíveis espaços e verificar somente dígitos
+                    if (!/^\d+$/.test(sapStr)) {
+                        missingFields.push("sapCode (apenas dígitos permitidos)");
+                    } else if (sapStr.length > 9) {
+                        missingFields.push("sapCode (máximo 9 dígitos)");
+                    } else {
+                        // opcional: manter sapCode como string sem zeros perdidos
+                        rowData.sapCode = sapStr;
                     }
                 }
 
-                // Extrai specs opcionais (colunas extras)
+                // 5) extrair specs - qualquer coluna amigável que NÃO esteja no headerMap
                 const specs = {};
-                headers.forEach(header => {
-                    if (!Object.values(headerMap).includes(header) && rowData[header]) {
-                        specs[header] = rowData[header];
+                headers.forEach(headerFriendly => {
+                    if (!Object.prototype.hasOwnProperty.call(headerMap, headerFriendly)) {
+                        const value = friendlyData[headerFriendly];
+                        if (value !== undefined && value !== null && value !== "") {
+                            specs[headerFriendly] = value;
+                        }
                     }
                 });
 
                 rowData.itemSpecs = specs;
 
+                // 6) empacotar inválidos ou válidos
                 if (missingFields.length > 0) {
                     invalidRows.push({
                         rowNumber,
@@ -80,14 +95,15 @@ module.exports = class ImportControllerReports {
             // Remove o arquivo após processar
             fs.unlinkSync(filePath);
 
-            // Caso exista algum sapCode inválido, retorna erro geral
+            // Se houver linhas inválidas, bloquear e retornar 400 com os detalhes
             if (invalidRows.length > 0) {
                 return res.status(400).json({
-                    error: "Alguns itens possuem campos inválidos",
+                    error: "Alguns itens possuem campos inválidos ou faltantes",
                     invalidRows
                 });
             }
 
+            // Se tudo OK, retorna as linhas válidas
             return res.status(200).json({
                 message: "Arquivo processado com sucesso",
                 validRows
