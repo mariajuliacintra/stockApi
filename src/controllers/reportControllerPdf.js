@@ -15,10 +15,15 @@ module.exports = class ReportControllerPdf {
     // ================== RELATÓRIO GERAL ==================
 static async generateGeneralReport(req, res) {
     try {
-        // Query de itens corrigida para ONLY_FULL_GROUP_BY
+        // Query de itens (ajustada para funcionar com ONLY_FULL_GROUP_BY)
         const items = await queryAsync(`
             SELECT 
-                i.idItem, i.name, i.brand, i.description, i.sapCode, i.minimumStock,
+                i.idItem, 
+                i.name, 
+                i.brand, 
+                i.description, 
+                i.sapCode, 
+                i.minimumStock,
                 c.categoryValue AS category,
                 GROUP_CONCAT(DISTINCT CONCAT(l.place, ' - ', l.code) SEPARATOR ', ') AS locations,
                 GROUP_CONCAT(DISTINCT CONCAT(ts.technicalSpecKey, ': ', ispec.specValue) SEPARATOR ', ') AS specs
@@ -32,34 +37,17 @@ static async generateGeneralReport(req, res) {
             ORDER BY c.categoryValue, i.name
         `);
 
-        const users = await queryAsync(`SELECT idUser, name, role, email, createdAt FROM user ORDER BY name`);
-
-        const transactions = await queryAsync(`
-            SELECT 
-                t.transactionDate, t.actionDescription, t.quantityChange,
-                u.name AS userName,
-                i.name AS itemName,
-                c.categoryValue AS category
-            FROM transactions t
-            LEFT JOIN user u ON t.fkIdUser = u.idUser
-            LEFT JOIN lots l ON t.fkIdLot = l.idLot
-            LEFT JOIN item i ON l.fkIdItem = i.idItem
-            LEFT JOIN category c ON i.fkIdCategory = c.idCategory
-            ORDER BY t.transactionDate DESC
-            LIMIT 50
-        `);
-
-        // Criar PDF
+        // Criação do PDF
         const doc = new PDFDocument({ margin: 30, size: "A4" });
         res.setHeader("Content-Disposition", "attachment; filename=relatorio_geral.pdf");
         res.setHeader("Content-Type", "application/pdf");
         doc.pipe(res);
 
-        // --- Título ---
+        // --- Título do relatório ---
         doc.fillColor("#1F4E79").fontSize(22).text("Relatório Geral do Estoque", { align: "center" });
         doc.moveDown(1.5);
 
-        // --- Itens por categoria em tabelas ---
+        // --- Itens agrupados por categoria ---
         const groupedItems = items.reduce((acc, item) => {
             acc[item.category] = acc[item.category] || [];
             acc[item.category].push(item);
@@ -87,7 +75,7 @@ static async generateGeneralReport(req, res) {
             doc.text("Nome", itemColX, tableTop);
             doc.text("Marca", brandColX, tableTop);
             doc.text("SAP", sapColX, tableTop);
-            doc.text("Etq. min", minStockColX, tableTop);
+            doc.text("Estq. min", minStockColX, tableTop);
             doc.text("Localizações", locationColX, tableTop);
             doc.text("Especificações", specsColX, tableTop);
             doc.moveTo(itemColX, tableTop + 15).lineTo(550, tableTop + 15).stroke();
@@ -99,11 +87,17 @@ static async generateGeneralReport(req, res) {
                 doc.text(i.name, itemColX, rowY, { width: brandColX - itemColX - 5 });
                 doc.text(i.brand || "-", brandColX, rowY, { width: sapColX - brandColX - 5 });
                 doc.text(i.sapCode || "-", sapColX, rowY, { width: minStockColX - sapColX - 5 });
-                doc.text(i.minimumStock !== null ? i.minimumStock.toString() : "-", minStockColX, rowY, { width: locationColX - minStockColX - 5 });
+                doc.text(
+                    i.minimumStock !== null ? i.minimumStock.toString() : "-",
+                    minStockColX,
+                    rowY,
+                    { width: locationColX - minStockColX - 5 }
+                );
                 doc.text(i.locations || "-", locationColX, rowY, { width: specsColX - locationColX - 5 });
                 doc.text(i.specs || "-", specsColX, rowY, { width: 550 - specsColX });
                 rowY += 20;
 
+                // Quebra automática de página
                 if (rowY > 750) {
                     doc.addPage();
                     rowY = 50;
@@ -111,96 +105,15 @@ static async generateGeneralReport(req, res) {
             });
         }
 
-        // --- Últimas transações em tabela ---
-        doc.addPage();
-        doc.fontSize(16).fillColor("#1F4E79").text("Últimas Transações", { underline: true });
-        doc.moveDown(0.5);
-
-        if (!transactions.length) {
-            doc.fillColor("#000").text("Nenhuma transação registrada.");
-        } else {
-            const tableTop = doc.y + 5;
-            const dateColX = 50;
-            const userColX = 150;
-            const itemColX = 270;
-            const actionColX = 420;
-            const qtyColX = 500;
-
-            // Cabeçalho
-            doc.fontSize(12).fillColor("#1F4E79").font("Helvetica-Bold");
-            doc.text("Data", dateColX, tableTop);
-            doc.text("Usuário", userColX, tableTop);
-            doc.text("Item", itemColX, tableTop);
-            doc.text("Ação", actionColX, tableTop);
-            doc.text("Qtd", qtyColX, tableTop);
-            doc.moveTo(dateColX, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-
-            let rowY = tableTop + 20;
-            transactions.forEach(tx => {
-                doc.font("Helvetica").fillColor("#000").fontSize(10);
-                doc.text(new Date(tx.transactionDate).toLocaleString(), dateColX, rowY, { width: userColX - dateColX - 5 });
-                doc.text(tx.userName, userColX, rowY, { width: itemColX - userColX - 5 });
-                doc.text(`${tx.category} - ${tx.itemName}`, itemColX, rowY, { width: actionColX - itemColX - 5 });
-                doc.text(formatAction(tx.actionDescription), actionColX, rowY, { width: qtyColX - actionColX - 5 });
-                doc.text(tx.quantityChange.toString(), qtyColX, rowY);
-                rowY += 20;
-
-                if (rowY > 750) {
-                    doc.addPage();
-                    rowY = 50;
-
-                    // Cabeçalho repetido
-                    doc.fontSize(12).fillColor("#1F4E79").font("Helvetica-Bold");
-                    doc.text("Data", dateColX, rowY);
-                    doc.text("Usuário", userColX, rowY);
-                    doc.text("Item", itemColX, rowY);
-                    doc.text("Ação", actionColX, rowY);
-                    doc.text("Qtd", qtyColX, rowY);
-                    doc.moveTo(dateColX, rowY + 15).lineTo(550, rowY + 15).stroke();
-                    rowY += 20;
-                }
-            });
-        }
-
-        // --- Usuários em tabela ---
-        doc.addPage();
-        doc.fontSize(16).fillColor("#1F4E79").text("Usuários", { underline: true });
-        doc.moveDown(0.5);
-
-        const tableTop = doc.y + 5;
-        const nameColX = 50;
-        const emailColX = 200;
-        const roleColX = 400;
-        const createdColX = 500;
-
-        doc.fontSize(12).fillColor("#1F4E79").font("Helvetica-Bold");
-        doc.text("Nome", nameColX, tableTop);
-        doc.text("Email", emailColX, tableTop);
-        doc.text("Função", roleColX, tableTop);
-        doc.text("Criado em", createdColX, tableTop);
-        doc.moveTo(nameColX, tableTop + 15).lineTo(550, tableTop + 15).stroke();
-
-        let rowY = tableTop + 20;
-        users.forEach(u => {
-            doc.font("Helvetica").fillColor("#000").fontSize(10);
-            doc.text(u.name, nameColX, rowY, { width: emailColX - nameColX - 5 });
-            doc.text(u.email, emailColX, rowY, { width: roleColX - emailColX - 5 });
-            doc.text(u.role, roleColX, rowY, { width: createdColX - roleColX - 5 });
-            doc.text(new Date(u.createdAt).toLocaleDateString(), createdColX, rowY);
-            rowY += 20;
-
-            if (rowY > 750) {
-                doc.addPage();
-                rowY = 50;
-            }
-        });
-
+        // Finaliza e envia o PDF
         doc.end();
+
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "Erro ao gerar relatório" });
     }
 }
+
 
 // ================== RELATÓRIO ESTOQUE BAIXO ==================
 static async generateLowStockReport(req, res) {
