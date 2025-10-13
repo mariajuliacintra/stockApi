@@ -17,7 +17,7 @@ module.exports = class ImportControllerReports {
             const validRows = [];
             const invalidRows = [];
 
-            // Mapeamento de nomes amigáveis para os nomes do banco de dados (removido "Apelidos")
+            // Mapeamento de nomes amigáveis para os nomes do banco de dados (sem "Apelidos")
             const headerMap = {
                 "Nome do Item": "name",
                 "Marca": "brand",
@@ -36,7 +36,7 @@ module.exports = class ImportControllerReports {
                 // Mapeia os cabeçalhos amigáveis para os nomes do banco
                 row.eachCell((cell, colNumber) => {
                     const columnHeader = headers[colNumber - 1];
-                    const dbColumnName = headerMap[columnHeader]; // Mapeamento para o nome do banco
+                    const dbColumnName = headerMap[columnHeader];
                     if (dbColumnName) {
                         rowData[dbColumnName] = cell.value;
                     }
@@ -48,6 +48,14 @@ module.exports = class ImportControllerReports {
                     if (!rowData[field]) missingFields.push(field);
                 });
 
+                // Validação do sapCode com 9 dígitos
+                if (rowData.sapCode) {
+                    const sapStr = String(rowData.sapCode).trim();
+                    if (!/^\d{9}$/.test(sapStr)) {
+                        missingFields.push("sapCode (deve ter exatamente 9 dígitos)");
+                    }
+                }
+
                 // Extrai specs opcionais (colunas extras)
                 const specs = {};
                 headers.forEach(header => {
@@ -56,7 +64,7 @@ module.exports = class ImportControllerReports {
                     }
                 });
 
-                rowData.itemSpecs = specs; // Adiciona specs ao objeto do item
+                rowData.itemSpecs = specs;
 
                 if (missingFields.length > 0) {
                     invalidRows.push({
@@ -72,10 +80,17 @@ module.exports = class ImportControllerReports {
             // Remove o arquivo após processar
             fs.unlinkSync(filePath);
 
+            // Caso exista algum sapCode inválido, retorna erro geral
+            if (invalidRows.length > 0) {
+                return res.status(400).json({
+                    error: "Alguns itens possuem campos inválidos",
+                    invalidRows
+                });
+            }
+
             return res.status(200).json({
                 message: "Arquivo processado com sucesso",
-                validRows,
-                invalidRows
+                validRows
             });
 
         } catch (error) {
