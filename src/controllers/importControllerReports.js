@@ -17,14 +17,29 @@ module.exports = class ImportControllerReports {
             const validRows = [];
             const invalidRows = [];
 
+            // Mapeamento de nomes amigáveis para os nomes do banco de dados (removido "Apelidos")
+            const headerMap = {
+                "Nome do Item": "name",
+                "Marca": "brand",
+                "Descrição": "description",
+                "Código SAP": "sapCode",
+                "Estoque Mínimo": "minimumStock"
+            };
+
             // Pega cabeçalhos (linha 1)
             const headers = worksheet.getRow(1).values.slice(1);
 
             worksheet.eachRow((row, rowNumber) => {
                 if (rowNumber === 1) return; // pula cabeçalho
                 const rowData = {};
+
+                // Mapeia os cabeçalhos amigáveis para os nomes do banco
                 row.eachCell((cell, colNumber) => {
-                    rowData[headers[colNumber - 1]] = cell.value;
+                    const columnHeader = headers[colNumber - 1];
+                    const dbColumnName = headerMap[columnHeader]; // Mapeamento para o nome do banco
+                    if (dbColumnName) {
+                        rowData[dbColumnName] = cell.value;
+                    }
                 });
 
                 // Validação dos campos obrigatórios
@@ -33,15 +48,15 @@ module.exports = class ImportControllerReports {
                     if (!rowData[field]) missingFields.push(field);
                 });
 
-                // Extrai specs opcionais (colunas que não são obrigatórias e não são padrão do item)
+                // Extrai specs opcionais (colunas extras)
                 const specs = {};
                 headers.forEach(header => {
-                    if (!["name", "brand", "sapCode", "description", "minimumStock", "aliases", "fkIdCategory"].includes(header) && rowData[header]) {
+                    if (!Object.values(headerMap).includes(header) && rowData[header]) {
                         specs[header] = rowData[header];
                     }
                 });
 
-                rowData.itemSpecs = specs; // adiciona specs ao objeto do item
+                rowData.itemSpecs = specs; // Adiciona specs ao objeto do item
 
                 if (missingFields.length > 0) {
                     invalidRows.push({
