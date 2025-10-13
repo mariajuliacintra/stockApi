@@ -2,7 +2,7 @@ const { queryAsync } = require("../utils/functions");
 const ExcelJS = require("exceljs");
 
 module.exports = class ReportControllerExcel {
-    // 📦 Relatório Geral de Estoque
+    // Relatório Geral de Estoque
     static async generateGeneralReportExcel(req, res) {
         try {
             // A query foi corrigida para usar JOINs e GROUP BY para obter:
@@ -66,7 +66,7 @@ module.exports = class ReportControllerExcel {
         }
     }
 
-    // ⚠️ Relatório de Estoque Baixo
+    // Relatório de Estoque Baixo
     static async generateLowStockReportExcel(req, res) {
         try {
             // A query foi corrigida para usar o minimumStock da tabela item
@@ -128,69 +128,94 @@ module.exports = class ReportControllerExcel {
         }
     }
 
-    // 🔄 Relatório de Transações
-    static async generateTransactionsReportExcel(req, res) {
-        try {
-            // A query foi corrigida para usar JOINs e buscar o nome da categoria corretamente
-            const transactions = await queryAsync(`
-                SELECT tr.idTransaction, tr.actionDescription, tr.quantityChange, tr.transactionDate,
-                       u.name AS userName, 
-                       i.name AS itemName, 
-                       c.categoryValue AS category, /* CORRIGIDO: Pega o nome da categoria do JOIN */
-                       l.lotNumber AS lotNumber,
-                       CONCAT(loc.place, ' - ', loc.code) AS location
-                FROM transactions tr
-                LEFT JOIN user u ON tr.fkIdUser = u.idUser
-                LEFT JOIN lots l ON tr.fkIdLot = l.idLot
-                LEFT JOIN item i ON l.fkIdItem = i.idItem
-                LEFT JOIN category c ON i.fkIdCategory = c.idCategory /* JOIN para categoria */
-                LEFT JOIN location loc ON l.fkIdLocation = loc.idLocation /* JOIN para localização */
-                ORDER BY tr.transactionDate DESC
-            `);
+    // Relatório de Transações
+static async generateTransactionsReportExcel(req, res) {
+    try {
+        const transactions = await queryAsync(`
+            SELECT tr.idTransaction, tr.actionDescription, tr.quantityChange, tr.transactionDate,
+                   u.name AS userName, 
+                   i.name AS itemName, 
+                   c.categoryValue AS category,
+                   l.lotNumber AS lotNumber,
+                   CONCAT(loc.place, ' - ', loc.code) AS location
+            FROM transactions tr
+            LEFT JOIN user u ON tr.fkIdUser = u.idUser
+            LEFT JOIN lots l ON tr.fkIdLot = l.idLot
+            LEFT JOIN item i ON l.fkIdItem = i.idItem
+            LEFT JOIN category c ON i.fkIdCategory = c.idCategory
+            LEFT JOIN location loc ON l.fkIdLocation = loc.idLocation
+            ORDER BY tr.transactionDate DESC
+        `);
 
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Transações");
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Transações");
 
-            worksheet.columns = [
-                { header: "ID", key: "idTransaction", width: 10 },
-                { header: "Item", key: "itemName", width: 30 },
-                { header: "Lote", key: "lotNumber", width: 10 },
-                { header: "Local", key: "location", width: 25 },
-                { header: "Categoria", key: "category", width: 20 },
-                { header: "Usuário", key: "userName", width: 25 },
-                { header: "Ação", key: "actionDescription", width: 15 },
-                { header: "Quantidade", key: "quantityChange", width: 15 },
-                { header: "Data", key: "transactionDate", width: 25 },
-            ];
+        worksheet.columns = [
+            { header: "ID", key: "idTransaction", width: 10 },
+            { header: "Item", key: "itemName", width: 30 },
+            { header: "Lote", key: "lotNumber", width: 10 },
+            { header: "Local", key: "location", width: 25 },
+            { header: "Categoria", key: "category", width: 20 },
+            { header: "Usuário", key: "userName", width: 25 },
+            { header: "Ação", key: "actionDescription", width: 15 },
+            { header: "Quantidade", key: "quantityChange", width: 15 },
+            { header: "Data", key: "transactionDate", width: 25 },
+        ];
 
-            transactions.forEach(tx => {
-                // Formatação da data para melhor visualização no Excel
-                const transactionData = {
-                    ...tx,
-                    transactionDate: tx.transactionDate ? new Date(tx.transactionDate).toLocaleString('pt-BR') : 'N/A'
-                };
-                worksheet.addRow(transactionData);
-            });
-            
-            worksheet.getRow(1).eachCell((cell) => {
-                cell.font = { bold: true };
-                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6E6E6' } };
-            });
+        transactions.forEach(tx => {
+            // Mapeamento da ação
+            let actionLabel = "";
+            switch (tx.actionDescription) {
+                case "IN":
+                    actionLabel = "Entrada";
+                    break;
+                case "OUT":
+                    actionLabel = "Saída";
+                    break;
+                case "AJUST":
+                    actionLabel = "Ajuste";
+                    break;
+                default:
+                    actionLabel = tx.actionDescription || "N/A";
+            }
 
-            res.setHeader(
-                "Content-Type",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            );
-            res.setHeader(
-                "Content-Disposition",
-                "attachment; filename=relatorio_transacoes.xlsx"
-            );
+            // Formatação da data
+            const transactionData = {
+                ...tx,
+                actionDescription: actionLabel,
+                transactionDate: tx.transactionDate
+                    ? new Date(tx.transactionDate).toLocaleString("pt-BR")
+                    : "N/A"
+            };
 
-            await workbook.xlsx.write(res);
-            res.end();
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Erro ao gerar relatório em Excel." });
-        }
+            worksheet.addRow(transactionData);
+        });
+
+        // Cabeçalho formatado
+        worksheet.getRow(1).eachCell((cell) => {
+            cell.font = { bold: true };
+            cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: { argb: "FFE6E6E6" }
+            };
+        });
+
+        res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+            "Content-Disposition",
+            "attachment; filename=relatorio_transacoes.xlsx"
+        );
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Erro ao gerar relatório em Excel." });
     }
+}
+
 };
