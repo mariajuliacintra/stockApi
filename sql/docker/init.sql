@@ -1,11 +1,32 @@
-CREATE DATABASE IF NOT EXISTS stock;
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
+CREATE DATABASE IF NOT EXISTS stock
+
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
 USE stock;
 
 DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS lots;
+DROP TABLE IF EXISTS itemSpec;
 DROP TABLE IF EXISTS item;
+DROP TABLE IF EXISTS category;
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS location;
 DROP TABLE IF EXISTS image;
+DROP TABLE IF EXISTS technicalSpec;
+
+CREATE TABLE technicalSpec (
+    idTechnicalSpec INT PRIMARY KEY AUTO_INCREMENT,
+    technicalSpecKey VARCHAR(255) NOT NULL UNIQUE
+);
+
+CREATE TABLE category (
+    idCategory INT PRIMARY KEY AUTO_INCREMENT,
+    categoryValue VARCHAR(255) NOT NULL UNIQUE
+);
 
 CREATE TABLE location (
     idLocation INT PRIMARY KEY AUTO_INCREMENT,
@@ -20,13 +41,15 @@ CREATE TABLE user (
     email VARCHAR(255) NOT NULL UNIQUE,
     hashedPassword VARCHAR(255) NOT NULL,
     role VARCHAR(255) NOT NULL CHECK (role IN ('user', 'manager')),
+    isActive BOOLEAN NOT NULL DEFAULT TRUE,
     createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE image (
     idImage INT PRIMARY KEY AUTO_INCREMENT,
-    imageData LONGBLOB NOT NULL
+    imageData LONGBLOB NOT NULL,
+    imageType VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE item (
@@ -35,42 +58,71 @@ CREATE TABLE item (
     aliases VARCHAR(255) DEFAULT NULL,
     brand VARCHAR(255),
     description TEXT,
-    technicalSpecs TEXT,
+    sapCode INT UNIQUE,
+    minimumStock INT DEFAULT NULL,
+    fkIdCategory INT NOT NULL,
+    fkIdImage INT DEFAULT NULL,
+    FOREIGN KEY (fkIdCategory) REFERENCES category(idCategory),
+    FOREIGN KEY (fkIdImage) REFERENCES image(idImage) ON DELETE SET NULL
+);
+
+CREATE TABLE itemSpec (
+    idItemSpec INT PRIMARY KEY AUTO_INCREMENT,
+    fkIdItem INT NOT NULL,
+    fkIdTechnicalSpec INT NOT NULL,
+    specValue VARCHAR(255) NOT NULL,
+    FOREIGN KEY (fkIdItem) REFERENCES item(idItem) ON DELETE CASCADE,
+    FOREIGN KEY (fkIdTechnicalSpec) REFERENCES technicalSpec(idTechnicalSpec),
+    UNIQUE(fkIdItem, fkIdTechnicalSpec)
+);
+
+CREATE TABLE lots (
+    idLot INT PRIMARY KEY AUTO_INCREMENT,
+    lotNumber INT NOT NULL,
     quantity DECIMAL(10, 2) NOT NULL DEFAULT 0.0,
     expirationDate DATE DEFAULT NULL,
-    batchCode VARCHAR(255) NOT NULL,
-    lotNumber INT NOT NULL,
-    fkIdImage INT DEFAULT NULL,
-    category ENUM('tool', 'material', 'rawMaterial', 'equipment', 'product', 'diverses') NOT NULL,
-    fkIdLocation INT, 
-    UNIQUE(batchCode, lotNumber),
+    fkIdLocation INT,
+    fkIdItem INT NOT NULL,
     FOREIGN KEY (fkIdLocation) REFERENCES location(idLocation),
-    FOREIGN KEY (fkIdImage) REFERENCES image(idImage) ON DELETE CASCADE
+    FOREIGN KEY (fkIdItem) REFERENCES item(idItem) ON DELETE CASCADE,
+    UNIQUE(fkIdItem, lotNumber)
 );
 
 CREATE TABLE transactions (
     idTransaction INT PRIMARY KEY AUTO_INCREMENT,
     fkIdUser INT NOT NULL,
-    fkIdItem INT NOT NULL,
+    fkIdLot INT NOT NULL,
     actionDescription ENUM('IN', 'OUT', 'AJUST') NOT NULL,
     quantityChange DECIMAL(10, 2) NOT NULL,
     oldQuantity DECIMAL(10, 2),
     newQuantity DECIMAL(10, 2),
     transactionDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (fkIdUser) REFERENCES user(idUser),
-    FOREIGN KEY (fkIdItem) REFERENCES item(idItem) ON DELETE CASCADE
+    FOREIGN KEY (fkIdLot) REFERENCES lots(idLot) ON DELETE CASCADE
 );
 
 CREATE INDEX idxItemName ON item(name);
-CREATE INDEX idxItemCategory ON item(category);
-CREATE INDEX idxItemFkIdLocation ON item(fkIdLocation);
-CREATE INDEX idxItemExpirationDate ON item(expirationDate);
+CREATE INDEX idxItemCategory ON item(fkIdCategory);
+CREATE INDEX idxLotsFkIdLocation ON lots(fkIdLocation);
+CREATE INDEX idxLotsExpirationDate ON lots(expirationDate);
 CREATE INDEX idxUserRole ON user(role);
 CREATE INDEX idxTransactionsFkIdUser ON transactions(fkIdUser);
-CREATE INDEX idxTransactionsFkIdItem ON transactions(fkIdItem);
+CREATE INDEX idxTransactionsFkLot ON transactions(fkIdLot);
 CREATE INDEX idxTransactionsDate ON transactions(transactionDate);
 CREATE INDEX idxTransactionsAction ON transactions(actionDescription);
 CREATE INDEX idxItemFkIdImage ON item(fkIdImage);
+CREATE INDEX idxItemSpecFkIdItem ON itemSpec(fkIdItem);
+CREATE INDEX idxItemSpecFkIdTechnicalSpec ON itemSpec(fkIdTechnicalSpec);
+
+INSERT INTO technicalSpec (technicalSpecKey) VALUES
+('Peso'), ('Voltagem'), ('Potencia'), ('Comprimento'), ('Largura'),
+('Altura'), ('Cor'), ('Material'), ('Capacidade'), ('Temperatura De Operação'),
+('Umidade De Operação'), ('Frequência'), ('Vida Útil'), ('Resistência'),
+('Tensão Máxima'), ('Corrente Máxima'), ('Dimensões');
+
+INSERT INTO category (categoryValue) VALUES
+('Ferramenta'), ('Material'), ('Matéria Prima'),
+('Equipamento'), ('Produto'), ('Diversos');
 
 INSERT INTO location (place, code) VALUES
 ('Prateleira', 'A1'), ('Prateleira', 'A2'), ('Prateleira', 'A3'),
@@ -80,17 +132,34 @@ INSERT INTO location (place, code) VALUES
 
 INSERT INTO user (name, email, hashedPassword, role) VALUES
 ('João Silva', 'joao.silva@sp.senai.br', '$2a$12$pUpODOURw.nIEgqGiT4sNuPPoesLu.9rg4dTyikxPGOiyMQUDzVZu', 'manager'),
-('Vinicius Fogaça', 'vfogacacintra@gmail.com', '$2a$12$Dgp7DDOLi91NJYR0abt.yuwSy7dDHDuS3wp/QRw02rs06HqDMr8WS', 'manager'),
+('Vinicius Fogaça', 'vinicius.f.cintra@aluno.senai.br', '$2a$12$ppohx.brUJB2QYW5Xd/xTOefsNrDYspO7XgAhGSLpht4vsirIodV.', 'manager'),
 ('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
 
-INSERT INTO item (name, aliases, brand, description, technicalSpecs, quantity, expirationDate, batchCode, lotNumber, category, fkIdLocation, fkIdImage) VALUES
-('Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', '500g', 15, NULL, 'MRT-202501-001', 1, 'tool', 1, NULL),
-('Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', '19mm x 20m', 25.0, '2026-10-01', 'FSL-202610-009', 1, 'material', 2, NULL),
-('Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', '400ml', 50.0, '2027-02-15', 'TDT-202702-014', 1, 'product', 3, NULL),
-('Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', '1.5V', 40.0, '2028-01-01', 'P-AA-202801-001', 1, 'diverses', 7, NULL),
-('Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', '1L', 7.0, '2026-12-31', 'OC-202612-005', 1, 'rawMaterial', 11, NULL);
+INSERT INTO item (idItem, name, aliases, brand, description, sapCode, minimumStock, fkIdCategory, fkIdImage) VALUES
+(1, 'Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', 202501001, 5, 1, NULL),
+(2, 'Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', 202610009, 10, 2, NULL),
+(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', 202702014, NULL, 5, NULL),
+(4, 'Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', 202801001, 20, 6, NULL),
+(5, 'Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', 202612005, 2, 3, NULL);
 
-INSERT INTO transactions (fkIdUser, fkIdItem, actionDescription, quantityChange, oldQuantity, newQuantity) VALUES
+INSERT INTO itemSpec (fkIdItem, fkIdTechnicalSpec, specValue) VALUES
+(1, 1, '500g'),
+(1, 8, 'Madeira e Aço'),
+(2, 7, 'Preta'),
+(2, 4, '20m'),
+(3, 9, '400ml'),
+(3, 7, 'Amarelo'),
+(4, 2, '1.5V'),
+(5, 9, '1L');
+
+INSERT INTO lots (idLot, lotNumber, quantity, expirationDate, fkIdLocation, fkIdItem) VALUES
+(1, 1, 15.0, NULL, 1, 1),
+(2, 1, 25.0, '2026-10-01', 2, 2),
+(3, 1, 50.0, '2027-02-15', 3, 3),
+(4, 1, 40.0, '2028-01-01', 7, 4),
+(5, 1, 7.0, '2026-12-31', 11, 5);
+
+INSERT INTO transactions (fkIdUser, fkIdLot, actionDescription, quantityChange, oldQuantity, newQuantity) VALUES
 (1, 1, 'IN', 15, 0, 15),
 (1, 2, 'IN', 25.0, 0.0, 25.0),
 (1, 3, 'IN', 50.0, 0.0, 50.0),

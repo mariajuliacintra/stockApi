@@ -1,33 +1,40 @@
-version: "3.8"
-
 services:
-  app:
-    # O "." indica que a imagem do Dcoker será contruida no Diretório atual
-    build: . 
-    command: ["./wait-for-it.sh", "db:3306", "--", "npm", "start"]
-    # Mapeia a porta 5000 do container para porta 5000 da maquina
-    ports:
-      - "5000:5000"
-    # Monta a maquina host no diretorio /usr/app dentro do container
-    volumes:
-      - .:/usr/app
-    # Indica que o serviço app depende do serviço db
-    depends_on:
-      - db
-
   db:
     image: mysql:8.0
-    # Configura o container para reiniciar automaticamente caso ele pare
+    container_name: stockapi-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: senai@604
-      MYSQL_DATABASE: stock
-    # Mapeia a porta 3306 do container para porta 3306 da maquina
+      # Usando a variável do .env para o banco de dados
+      - MYSQL_ROOT_PASSWORD=${DATABASEPASSWORD}
+      - MYSQL_DATABASE=stock
     ports:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
       - ./sql/docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASEPASSWORD}"]
+      timeout: 20s
+      retries: 10
+      start_period: 30s
+  
+  app:
+    build: .
+    container_name: stockapi-app
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/usr/app
+      - /usr/app/node_modules
+    environment:
+      # Passando a variável do .env para a sua aplicação
+      - MYSQL_ROOT_PASSWORD=${DATABASEPASSWORD}
+      - MYSQL_DATABASE=stock
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+    depends_on:
+      - db
 
 volumes:
-  db_data:
+  db_data: {}

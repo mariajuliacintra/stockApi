@@ -191,4 +191,6 @@ module.exports = class LocationController {
             });
         }
     }
+}
+
 };

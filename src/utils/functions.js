@@ -1,6 +1,27 @@
 const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
-const tokenSecret = process.env.SECRET;
+const tokenSecret = process.env.SECRETKEY;
+
+const handleResponse = (res, status, { success, message, error, details, data, arrayName }) => {
+  if (success) {
+    const responseBody = {
+      success: true,
+      message: message || "Operação realizada com sucesso.",
+      details: details || null,
+    };
+    if (data !== undefined && arrayName) {
+      responseBody[arrayName] = Array.isArray(data) ? data : [data];
+    }
+    return res.status(status || 200).json(responseBody);
+  } else {
+    const responseBody = {
+      success: false,
+      error: error || "Ocorreu um erro na operação.",
+      details: details || null,
+    };
+    return res.status(status || 500).json(responseBody);
+  }
+};
 
 const queryAsync = (query, values = []) => {
   return new Promise((resolve, reject) => {
@@ -42,4 +63,4 @@ function generateRandomCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-module.exports = { queryAsync, validatePassword, validateDomain, createToken, generateRandomCode };
+module.exports = { queryAsync, validatePassword, validateDomain, createToken, generateRandomCode, handleResponse };
