@@ -131,7 +131,7 @@ INSERT INTO user (name, email, hashedPassword, role) VALUES
 INSERT INTO item (idItem, name, aliases, brand, description, sapCode, minimumStock, fkIdCategory, fkIdImage) VALUES
 (1, 'Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', 202501001, 5, 1, NULL),
 (2, 'Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', 202610009, 10, 2, NULL),
-(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', x, NULL, 5, NULL),
+(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', 202702014, NULL, 5, NULL),
 (4, 'Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', 202801001, 20, 6, NULL),
 (5, 'Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', 202612005, 2, 3, NULL);
 
