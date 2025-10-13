@@ -1,149 +1,194 @@
-const { queryAsync } = require("../utils/functions");
-const ExcelJS = require("exceljs");
+const { queryAsync, handleResponse } = require('../utils/functions');
 
-module.exports = class ReportControllerExcel {
-    // 📦 Relatório Geral de Estoque
-    static async generateGeneralReportExcel(req, res) {
+// Controller responsável por gerenciar as operações relacionadas às localizações
+module.exports = class LocationController {
+
+    // Retorna todas as localizações cadastradas
+    static async getLocations(req, res) {
         try {
-            const items = await queryAsync(`
-                SELECT 
-                    idItem, name, category, brand, description, quantity, fkIdLocation
-                FROM item
-            `);
+            const query = "SELECT * FROM location";
+            const locations = await queryAsync(query);
 
-            const locations = await queryAsync(`SELECT idLocation, place, code FROM location`);
-            const locationMap = Object.fromEntries(locations.map(loc => [loc.idLocation, `${loc.place} - ${loc.code}`]));
-
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Estoque Geral");
-
-            worksheet.columns = [
-                { header: "ID", key: "idItem", width: 10 },
-                { header: "Nome", key: "name", width: 30 },
-                { header: "Categoria", key: "category", width: 20 },
-                { header: "Marca", key: "brand", width: 20 },
-                { header: "Descrição", key: "description", width: 40 },
-                { header: "Quantidade", key: "quantity", width: 15 },
-                { header: "Local", key: "location", width: 25 },
-            ];
-
-            items.forEach(item => {
-                worksheet.addRow({
-                    ...item,
-                    location: locationMap[item.fkIdLocation] || "Sem localização",
-                });
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Localizações recuperadas com sucesso.",
+                data: locations,
+                arrayName: "locations"
             });
 
-            res.setHeader(
-                "Content-Type",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            );
-            res.setHeader(
-                "Content-Disposition",
-                "attachment; filename=relatorio_estoque.xlsx"
-            );
-
-            await workbook.xlsx.write(res);
-            res.end();
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Erro ao gerar relatório em Excel." });
+            console.error("[LocationController] Erro ao buscar localizações:", error);
+            return handleResponse(res, 500, {
+                success: false,
+                error: "Erro interno do servidor",
+                details: error.message
+            });
         }
     }
 
-    // ⚠️ Relatório de Estoque Baixo
-    static async generateLowStockReportExcel(req, res) {
+    // Retorna uma localização específica pelo ID
+    static async getLocationById(req, res) {
+        const { idLocation } = req.params;
+
         try {
-            const lowStockLimit = 10;
+            const query = "SELECT * FROM location WHERE idLocation = ?";
+            const location = await queryAsync(query, [idLocation]);
 
-            const items = await queryAsync(`
-                SELECT idItem, name, category, brand, quantity, fkIdLocation
-                FROM item
-                WHERE quantity <= ?
-            `, [lowStockLimit]);
-
-            const locations = await queryAsync(`SELECT idLocation, place, code FROM location`);
-            const locationMap = Object.fromEntries(locations.map(loc => [loc.idLocation, `${loc.place} - ${loc.code}`]));
-
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Estoque Baixo");
-
-            worksheet.columns = [
-                { header: "ID", key: "idItem", width: 10 },
-                { header: "Nome", key: "name", width: 30 },
-                { header: "Categoria", key: "category", width: 20 },
-                { header: "Marca", key: "brand", width: 20 },
-                { header: "Quantidade", key: "quantity", width: 15 },
-                { header: "Local", key: "location", width: 25 },
-            ];
-
-            items.forEach(item => {
-                worksheet.addRow({
-                    ...item,
-                    location: locationMap[item.fkIdLocation] || "Sem localização",
+            if (location.length === 0) {
+                return handleResponse(res, 404, {
+                    success: false,
+                    error: "Localização não encontrada.",
+                    details: "O ID da localização fornecido não existe."
                 });
+            }
+
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Localização recuperada com sucesso.",
+                data: location[0],
+                arrayName: "location"
             });
 
-            res.setHeader(
-                "Content-Type",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            );
-            res.setHeader(
-                "Content-Disposition",
-                "attachment; filename=relatorio_estoque_baixo.xlsx"
-            );
-
-            await workbook.xlsx.write(res);
-            res.end();
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Erro ao gerar relatório em Excel." });
+            console.error("[LocationController] Erro ao buscar localização por ID:", error);
+            return handleResponse(res, 500, {
+                success: false,
+                error: "Erro interno do servidor",
+                details: error.message
+            });
         }
     }
 
-    // 🔄 Relatório de Transações
-    static async generateTransactionsReportExcel(req, res) {
+    // Cria uma nova localização
+    static async createLocation(req, res) {
+        const { place, code } = req.body;
+
         try {
-            const transactions = await queryAsync(`
-                SELECT tr.idTransaction, tr.actionDescription, tr.quantityChange, tr.transactionDate,
-                       tr.fkIdItem, tr.fkIdUser, u.name AS userName, i.name AS itemName, i.category
-                FROM transactions tr
-                LEFT JOIN user u ON tr.fkIdUser = u.idUser
-                LEFT JOIN item i ON tr.fkIdItem = i.idItem
-                ORDER BY tr.transactionDate DESC
-            `);
+            if (!place || !code) {
+                return handleResponse(res, 400, {
+                    success: false,
+                    error: "Campos obrigatórios ausentes",
+                    details: "Os campos 'place' e 'code' são obrigatórios."
+                });
+            }
 
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet("Transações");
+            const query = "INSERT INTO location (place, code) VALUES (?, ?)";
+            const values = [place, code];
+            const result = await queryAsync(query, values);
 
-            worksheet.columns = [
-                { header: "ID", key: "idTransaction", width: 10 },
-                { header: "Item", key: "itemName", width: 30 },
-                { header: "Categoria", key: "category", width: 20 },
-                { header: "Usuário", key: "userName", width: 25 },
-                { header: "Ação", key: "actionDescription", width: 15 },
-                { header: "Quantidade", key: "quantityChange", width: 15 },
-                { header: "Data", key: "transactionDate", width: 25 },
-            ];
-
-            transactions.forEach(tx => {
-                worksheet.addRow(tx);
+            return handleResponse(res, 201, {
+                success: true,
+                message: "Localização criada com sucesso!",
+                data: { locationId: result.insertId },
+                arrayName: "location"
             });
 
-            res.setHeader(
-                "Content-Type",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            );
-            res.setHeader(
-                "Content-Disposition",
-                "attachment; filename=relatorio_transacoes.xlsx"
-            );
-
-            await workbook.xlsx.write(res);
-            res.end();
         } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: "Erro ao gerar relatório em Excel." });
+            console.error("[LocationController] Erro ao criar localização:", error);
+
+            if (error.code === 'ER_DUP_ENTRY') {
+                return handleResponse(res, 409, {
+                    success: false,
+                    error: "Conflito de dados",
+                    details: "A combinação de 'place' e 'code' já existe."
+                });
+            }
+
+            return handleResponse(res, 500, {
+                success: false,
+                error: "Erro interno do servidor",
+                details: error.message
+            });
+        }
+    }
+
+    // Atualiza uma localização existente
+    static async updateLocation(req, res) {
+        const { idLocation } = req.params;
+        const { place, code } = req.body;
+
+        try {
+            if (!place || !code) {
+                return handleResponse(res, 400, {
+                    success: false,
+                    error: "Campos obrigatórios ausentes",
+                    details: "Os campos 'place' e 'code' são obrigatórios."
+                });
+            }
+
+            const query = "UPDATE location SET place = ?, code = ? WHERE idLocation = ?";
+            const values = [place, code, idLocation];
+            const result = await queryAsync(query, values);
+
+            if (result.affectedRows === 0) {
+                return handleResponse(res, 404, {
+                    success: false,
+                    error: "Localização não encontrada.",
+                    details: "O ID da localização fornecido não existe."
+                });
+            }
+
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Localização atualizada com sucesso!"
+            });
+
+        } catch (error) {
+            console.error("[LocationController] Erro ao atualizar localização:", error);
+
+            if (error.code === 'ER_DUP_ENTRY') {
+                return handleResponse(res, 409, {
+                    success: false,
+                    error: "Conflito de dados",
+                    details: "A combinação de 'place' e 'code' já existe."
+                });
+            }
+
+            return handleResponse(res, 500, {
+                success: false,
+                error: "Erro interno do servidor",
+                details: error.message
+            });
+        }
+    }
+
+    // Exclui uma localização
+    static async deleteLocation(req, res) {
+        const { idLocation } = req.params;
+
+        try {
+            const query = "DELETE FROM location WHERE idLocation = ?";
+            const result = await queryAsync(query, [idLocation]);
+
+            if (result.affectedRows === 0) {
+                return handleResponse(res, 404, {
+                    success: false,
+                    error: "Localização não encontrada.",
+                    details: "O ID da localização fornecido não existe."
+                });
+            }
+
+            return handleResponse(res, 200, {
+                success: true,
+                message: "Localização excluída com sucesso!"
+            });
+
+        } catch (error) {
+            console.error("[LocationController] Erro ao excluir localização:", error);
+
+            if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+                return handleResponse(res, 409, {
+                    success: false,
+                    error: "Conflito de chave estrangeira",
+                    details: "Não é possível excluir esta localização pois ela está associada a um ou mais lotes."
+                });
+            }
+
+            return handleResponse(res, 500, {
+                success: false,
+                error: "Erro interno do servidor",
+                details: error.message
+            });
         }
     }
 };
