@@ -131,37 +131,4 @@ INSERT INTO location (place, code) VALUES
 ('Depósito', 'D1'), ('Depósito', 'D2'), ('Depósito', 'D3');
 
 INSERT INTO user (name, email, hashedPassword, role) VALUES
-('João Silva', 'joao.silva@sp.senai.br', '$2a$12$pUpODOURw.nIEgqGiT4sNuPPoesLu.9rg4dTyikxPGOiyMQUDzVZu', 'manager'),
-('Vinicius Fogaça', 'vinicius.f.cintra@aluno.senai.br', '$2a$12$ppohx.brUJB2QYW5Xd/xTOefsNrDYspO7XgAhGSLpht4vsirIodV.', 'manager'),
-('Maria Santos', 'maria.santos@sp.senai.br', '$2a$12$2uLf6ov665mPZRu6gBA7oufMhTC2mowcXEkSKw4H8Pbq27XPDn3Ca', 'user');
-
-INSERT INTO item (idItem, name, aliases, brand, description, sapCode, minimumStock, fkIdCategory, fkIdImage) VALUES
-(1, 'Martelo Unha', 'Martelo de Carpinteiro, Martelo Unha de Carpinteiro', 'Tramontina', 'Cabo de madeira', 202501001, 5, 1, NULL),
-(2, 'Fita Isolante', 'Fita Elétrica, Fita Isoladora', '3M', 'Antichamas, preta', 202610009, 10, 2, NULL),
-(3, 'Tinta Demarcação', 'Tinta de Sinalização, Spray de Marcação', 'Coral', 'Amarela, spray', 202702014, NULL, 5, NULL),
-(4, 'Pilhas AA', 'Baterias AA, Pilhas Alcalinas', 'Duracell', 'Alcalinas', 202801001, 20, 6, NULL),
-(5, 'Óleo de Corte', 'Fluido de Corte, Óleo de Usinagem', 'Quimatic', 'Fluido de corte integral', 202612005, 2, 3, NULL);
-
-INSERT INTO itemSpec (fkIdItem, fkIdTechnicalSpec, specValue) VALUES
-(1, 1, '500g'),
-(1, 8, 'Madeira e Aço'),
-(2, 7, 'Preta'),
-(2, 4, '20m'),
-(3, 9, '400ml'),
-(3, 7, 'Amarelo'),
-(4, 2, '1.5V'),
-(5, 9, '1L');
-
-INSERT INTO lots (idLot, lotNumber, quantity, expirationDate, fkIdLocation, fkIdItem) VALUES
-(1, 1, 15.0, NULL, 1, 1),
-(2, 1, 25.0, '2026-10-01', 2, 2),
-(3, 1, 50.0, '2027-02-15', 3, 3),
-(4, 1, 40.0, '2028-01-01', 7, 4),
-(5, 1, 7.0, '2026-12-31', 11, 5);
-
-INSERT INTO transactions (fkIdUser, fkIdLot, actionDescription, quantityChange, oldQuantity, newQuantity) VALUES
-(1, 1, 'IN', 15, 0, 15),
-(1, 2, 'IN', 25.0, 0.0, 25.0),
-(1, 3, 'IN', 50.0, 0.0, 50.0),
-(1, 4, 'IN', 40.0, 0.0, 40.0),
-(1, 5, 'IN', 7.0, 0.0, 7.0);
+('Vinicius Fogaça', 'vinicius.f.cintra@aluno.senai.br', '$2a$12$ppohx.brUJB2QYW5Xd/xTOefsNrDYspO7XgAhGSLpht4vsirIodV.', 'manager');
