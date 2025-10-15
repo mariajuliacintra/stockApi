@@ -79,13 +79,13 @@ router.post("/technicalSpec", verifyJWT, authorizeManager, technicalSpecControll
 router.put("/technicalSpec/:idTechnicalSpec", verifyJWT, authorizeManager, technicalSpecController.updateTechnicalSpec);
 router.delete("/technicalSpec/:idTechnicalSpec", verifyJWT, authorizeManager, technicalSpecController.deleteTechnicalSpec);
 
-router.get("/report/pdf/general",verifyJWT, authorizeManager, reportControllerPdf.generateGeneralReport);
+router.get("/report/pdf/general", verifyJWT, authorizeManager, reportControllerPdf.generateGeneralReport);
 router.get("/report/pdf/low-stock", verifyJWT, authorizeManager, reportControllerPdf.generateLowStockReport);
 router.get("/report/pdf/transactions", verifyJWT, authorizeManager,reportControllerPdf.generateTransactionsReport);
 
-router.get("/report/excel/general", reportControllerExcel.generateGeneralReportExcel);
-router.get("/report/excel/low-stock",reportControllerExcel.generateLowStockReportExcel);
-router.get("/report/excel/transactions", reportControllerExcel.generateTransactionsReportExcel);
+router.get("/report/excel/general", verifyJWT, reportControllerExcel.generateGeneralReportExcel);
+router.get("/report/excel/low-stock", verifyJWT,reportControllerExcel.generateLowStockReportExcel);
+router.get("/report/excel/transactions", verifyJWT, reportControllerExcel.generateTransactionsReportExcel);
 
 router.post("/import/excel/items", uploadExcel.single("file"), ImportControllerReports.importItemsExcel);
 

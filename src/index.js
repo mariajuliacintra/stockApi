@@ -20,7 +20,7 @@ class AppController {
   }
   routes() {
     const apiRoutes = require("./routes/apiRoutes");
-    this.express.use("/stock", apiRoutes);
+    this.express.use("/api", apiRoutes);
   }
 }
 

@@ -276,7 +276,7 @@ module.exports = class UserController {
     static async getAllUsers(req, res) {
         try {
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 10;
+            const limit = parseInt(req.query.limit) || 25;
             const offset = (page - 1) * limit;
             const countQuery = "SELECT COUNT(*) as count FROM user WHERE isActive = TRUE";
             const [countResult] = await queryAsync(countQuery);

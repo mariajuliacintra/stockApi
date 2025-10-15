@@ -39,7 +39,7 @@ static async generateGeneralReport(req, res) {
 
         // Criação do PDF
         const doc = new PDFDocument({ margin: 30, size: "A4" });
-        res.setHeader("Content-Disposition", "attachment; filename=relatorio_geral.pdf");
+        res.setHeader("Content-Disposition", "attachment; filename=relatorioGeral.pdf");
         res.setHeader("Content-Type", "application/pdf");
         doc.pipe(res);
 
@@ -134,7 +134,7 @@ static async generateLowStockReport(req, res) {
         `);
 
         const doc = new PDFDocument({ margin: 30, size: "A4" });
-        res.setHeader("Content-Disposition", "attachment; filename=relatorio_estoque_baixo.pdf");
+        res.setHeader("Content-Disposition", "attachment; filename=relatorioEstoqueBaixo.pdf");
         res.setHeader("Content-Type", "application/pdf");
         doc.pipe(res);
 
@@ -206,7 +206,7 @@ static async generateTransactionsReport(req, res) {
         `);
 
         const doc = new PDFDocument({ margin: 30, size: "A4" });
-        res.setHeader("Content-Disposition", "attachment; filename=relatorio_transacoes.pdf");
+        res.setHeader("Content-Disposition", "attachment; filename=relatorioTransacoes.pdf");
         res.setHeader("Content-Type", "application/pdf");
         doc.pipe(res);
 
