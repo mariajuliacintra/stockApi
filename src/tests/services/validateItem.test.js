@@ -1,20 +1,20 @@
 // tests/services/validateItem.test.js
 
 // Mocka a função queryAsync de ../utils/functions
-const { queryAsync } = require('../../src/utils/functions');
-jest.mock('../../src/utils/functions', () => ({
+const { queryAsync } = require('../../utils/functions');
+jest.mock('../../utils/functions', () => ({
   queryAsync: jest.fn(),
 }));
 
 // Mocka a função validateForeignKey de ../utils/querys
 // Note: certifique-se de que o caminho está correto. Se for ../utils/query.js, ajuste.
-const { validateForeignKey } = require('../../src/utils/querys');
-jest.mock('../../src/utils/querys', () => ({
+const { validateForeignKey } = require('../../utils/querys');
+jest.mock('../../utils/querys', () => ({
   validateForeignKey: jest.fn(),
 }));
 
 // Importa as funções a serem testadas
-const { validateCreateItem, validateUpdateInformation } = require('../../src/services/validateItem');
+const { validateCreateItem, validateUpdateInformation } = require('../../services/validateItem');
 
 describe('validateCreateItem', () => {
   // Limpa os mocks antes de cada teste para garantir um estado limpo

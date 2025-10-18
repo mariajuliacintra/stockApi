@@ -1,13 +1,13 @@
 // tests/utils/query.test.js
 
 // Mock do módulo functions.js para simular o comportamento de queryAsync
-const { queryAsync } = require('../../src/utils/functions');
-jest.mock('../../src/utils/functions', () => ({
+const { queryAsync } = require('../../utils/functions');
+jest.mock('../../../src/utils/functions', () => ({
   queryAsync: jest.fn(),
 }));
 
 // Importe as funções que você vai testar
-const { findUserByEmail, findUserById, validateForeignKey } = require('../../src/utils/querys');
+const { findUserByEmail, findUserById, validateForeignKey } = require('../../utils/querys');
 
 
 describe('findUserByEmail', () => {

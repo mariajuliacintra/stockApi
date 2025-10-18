@@ -8,8 +8,8 @@ jest.mock('../../src/utils/functions', () => ({
 }));
 
 // Importa as funções que você vai testar e os mocks das dependências
-const { validateUser, validateEmail, findUserByEmailAndActiveStatus, validateLogin, validateUpdate, validateRecovery } = require('../../src/services/validateUser');
-const { validateDomain, validatePassword, queryAsync } = require('../../src/utils/functions'); // Importa os mocks
+const { validateUser, validateEmail, findUserByEmailAndActiveStatus, validateLogin, validateUpdate, validateRecovery } = require('../../services/validateUser');
+const { validateDomain, validatePassword, queryAsync } = require('../../utils/functions'); // Importa os mocks
 
 describe('validateUser', () => {
   // Limpa os mocks antes de cada teste para garantir isolamento

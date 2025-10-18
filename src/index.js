@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const fs = require('fs');
 const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 class AppController {
   constructor() {
@@ -18,6 +20,8 @@ class AppController {
     this.express.use(express.json());
   }
   routes() {
+    this.express.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
     const apiRoutes = require("./routes/apiRoutes");
     this.express.use("/api", apiRoutes);
   }
