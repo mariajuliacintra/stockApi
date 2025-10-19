@@ -1,13 +1,13 @@
-const connect = require("../../src/db/connect");
-const { queryAsync } = require("../../src/utils/functions");
+const connect = require("../../db/connect");
+const { queryAsync } = require("../../utils/functions");
 
 // Mocka o módulo connect para simular a resposta do banco de dados
 // Isso substitui a implementação real de `db/connect.js`
-jest.mock("../../src/db/connect", () => ({
+jest.mock("../../db/connect", () => ({
   query: jest.fn(),
 }));
 
-const { validateDomain } = require("../../src/utils/functions");
+const { validateDomain } = require("../../utils/functions");
 
 describe("validateDomain", () => {
   it("deve retornar null para um domínio SENAI válido", () => {
@@ -38,7 +38,7 @@ describe("validateDomain", () => {
   });
 });
 
-const { validatePassword } = require("../../src/utils/functions");
+const { validatePassword } = require("../../utils/functions");
 
 describe("validatePassword", () => {
   it("deve retornar true para uma senha válida", () => {
@@ -63,7 +63,7 @@ describe("validatePassword", () => {
   // Adicione outros testes para diferentes falhas (sem número, sem letra, etc.)
 });
 
-const { generateRandomCode } = require("../../src/utils/functions");
+const { generateRandomCode } = require("../../utils/functions");
 
 describe("generateRandomCode", () => {
   it("deve gerar um código de 6 dígitos", () => {

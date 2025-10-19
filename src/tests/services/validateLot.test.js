@@ -1,19 +1,19 @@
 // tests/services/validateLot.test.js
 
 // Mocka as dependências externas
-const { queryAsync } = require('../../src/utils/functions');
-const { validateForeignKey } = require('../../src/utils/querys'); // Note que o path original pode ser 'querys' ou 'query'
+const { queryAsync } = require('../../utils/functions');
+const { validateForeignKey } = require('../../utils/querys'); // Note que o path original pode ser 'querys' ou 'query'
 
-jest.mock('../../src/utils/functions', () => ({
+jest.mock('../../utils/functions', () => ({
   queryAsync: jest.fn(),
 }));
 
-jest.mock('../../src/utils/querys', () => ({
+jest.mock('../../utils/querys', () => ({
   validateForeignKey: jest.fn(),
 }));
 
 // Importa as funções a serem testadas
-const { validateCreateLot, validateUpdateLotQuantity, validateUpdateLotInformation } = require('../../src/services/validateLot');
+const { validateCreateLot, validateUpdateLotQuantity, validateUpdateLotInformation } = require('../../services/validateLot');
 
 describe('validateCreateLot', () => {
   // Limpa os mocks antes de cada teste
