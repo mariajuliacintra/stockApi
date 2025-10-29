@@ -83,11 +83,11 @@ router.get("/report/pdf/general", verifyJWT, authorizeManager, reportControllerP
 router.get("/report/pdf/low-stock", verifyJWT, authorizeManager, reportControllerPdf.generateLowStockReport);
 router.get("/report/pdf/transactions", verifyJWT, authorizeManager,reportControllerPdf.generateTransactionsReport);
 
-router.get("/report/excel/general", verifyJWT, reportControllerExcel.generateGeneralReportExcel);
-router.get("/report/excel/low-stock", verifyJWT,reportControllerExcel.generateLowStockReportExcel);
-router.get("/report/excel/transactions", verifyJWT, reportControllerExcel.generateTransactionsReportExcel);
+router.get("/report/excel/general", verifyJWT, authorizeManager, reportControllerExcel.generateGeneralReportExcel);
+router.get("/report/excel/low-stock", verifyJWT, authorizeManager,reportControllerExcel.generateLowStockReportExcel);
+router.get("/report/excel/transactions", verifyJWT, authorizeManager, reportControllerExcel.generateTransactionsReportExcel);
 
-router.post("/import/excel/items", uploadExcel.single("file"), ImportControllerReports.importItemsExcel);
+router.post("/import/excel/items", uploadExcel.single("file"), verifyJWT, authorizeManager, ImportControllerReports.importItemsExcel);
 
 router.get("/transactions", verifyJWT, authorizeManager, transactionController.getAllTransactions);
 router.get("/transactions/:idTransaction", verifyJWT, authorizeManager, transactionController.getTransactionById);
