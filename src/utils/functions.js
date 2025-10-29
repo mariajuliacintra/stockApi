@@ -2,16 +2,26 @@ const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const tokenSecret = process.env.SECRETKEY;
 
-const handleResponse = (res, status, { success, message, error, details, data, arrayName }) => {
+const handleResponse = (
+  res,
+  status,
+  { success, message, error, details, data, arrayName, pagination }
+) => {
   if (success) {
     const responseBody = {
       success: true,
       message: message || "Operação realizada com sucesso.",
       details: details || null,
     };
+    
+    if (pagination !== undefined) {
+      responseBody.pagination = pagination;
+    }
+
     if (data !== undefined && arrayName) {
       responseBody[arrayName] = Array.isArray(data) ? data : [data];
     }
+
     return res.status(status || 200).json(responseBody);
   } else {
     const responseBody = {
@@ -55,12 +65,20 @@ function createToken(payload, expirationTime = "1h") {
 }
 
 function validatePassword(password) {
-  const regex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[.@$!%*?&])[A-Za-z\d.@$!%*?&]{8,}$/;
+  const regex =
+    /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[.@$!%*?&])[A-Za-z\d.@$!%*?&]{8,}$/;
   return regex.test(password);
 }
 
 function generateRandomCode() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-module.exports = { queryAsync, validatePassword, validateDomain, createToken, generateRandomCode, handleResponse };
+module.exports = {
+  queryAsync,
+  validatePassword,
+  validateDomain,
+  createToken,
+  generateRandomCode,
+  handleResponse,
+};
