@@ -278,11 +278,11 @@ module.exports = class UserController {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 25;
             const offset = (page - 1) * limit;
-            const countQuery = "SELECT COUNT(*) as count FROM user WHERE isActive = TRUE";
+            const countQuery = "SELECT COUNT(*) as totalCount FROM user WHERE isActive = TRUE";
             const [countResult] = await queryAsync(countQuery);
-            const totalItems = countResult.count;
+            const totalItems = countResult.totalCount;
             const totalPages = Math.ceil(totalItems / limit);
-
+    
             const dataQuery = `
                 SELECT idUser, name, email, role, createdAt
                 FROM user 
@@ -292,17 +292,18 @@ module.exports = class UserController {
                 OFFSET ?
             `;
             const users = await queryAsync(dataQuery, [limit, offset]);
-
+    
             return handleResponse(res, 200, {
                 success: true,
                 message: "Lista de usuários obtida com sucesso.",
-                data: {
+                data: users,
+                arrayName: "users",
+                pagination: {
                     totalItems: totalItems,
                     totalPages: totalPages,
                     currentPage: page,
-                    users: users
+                    itemsPerPage: limit,
                 },
-                arrayName: "data"
             });
         } catch (error) {
             console.error(error);

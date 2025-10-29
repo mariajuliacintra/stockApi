@@ -145,11 +145,11 @@ module.exports = class ItemController {
 
   static async getAllItems(req, res) {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 25;
-      const offset = (page - 1) * limit;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 25;
+        const offset = (page - 1) * limit;
 
-      const query = `
+        const query = `
             SELECT
                 i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock, i.sapCode,
                 c.idCategory AS categoryId, c.categoryValue,
@@ -172,65 +172,64 @@ module.exports = class ItemController {
             ORDER BY i.name
             LIMIT ? OFFSET ?
         `;
-      const items = await queryAsync(query, [limit, offset]);
+        const items = await queryAsync(query, [limit, offset]);
 
-      const countQuery = `
+        const countQuery = `
             SELECT COUNT(*) as totalCount FROM item
         `;
-      const [{ totalCount }] = await queryAsync(countQuery);
-      const totalPages = Math.ceil(totalCount / limit);
+        const [{ totalCount }] = await queryAsync(countQuery);
+        const totalPages = Math.ceil(totalCount / limit);
 
-      const formattedItems = items.map((item) => ({
-        idItem: item.idItem,
-        name: item.name,
-        aliases: item.aliases,
-        brand: item.brand,
-        description: item.description,
-        minimumStock: item.minimumStock,
-        sapCode: item.sapCode,
-        category: {
-          idCategory: item.categoryId,
-          value: item.categoryValue,
-        },
-        totalQuantity: item.totalQuantity || 0,
-        technicalSpecs:
-          item.technicalSpecs &&
-          item.technicalSpecs.length > 0 &&
-          item.technicalSpecs[0].idTechnicalSpec
-            ? item.technicalSpecs
-            : [],
-      }));
+        const formattedItems = items.map((item) => ({
+            idItem: item.idItem,
+            name: item.name,
+            aliases: item.aliases,
+            brand: item.brand,
+            description: item.description,
+            minimumStock: item.minimumStock,
+            sapCode: item.sapCode,
+            category: {
+                idCategory: item.categoryId,
+                value: item.categoryValue,
+            },
+            totalQuantity: item.totalQuantity || 0,
+            technicalSpecs:
+                item.technicalSpecs &&
+                item.technicalSpecs.length > 0 &&
+                item.technicalSpecs[0].idTechnicalSpec
+                    ? item.technicalSpecs
+                    : [],
+        }));
 
-      return handleResponse(res, 200, {
-        success: true,
-        message: "Lista de itens obtida com sucesso.",
-        data: formattedItems,
-        arrayName: "items",
-        pagination: {
-          totalItems: totalCount,
-          totalPages: totalPages,
-          currentPage: page,
-          itemsPerPage: limit,
-        },
-      });
+        return handleResponse(res, 200, {
+            success: true,
+            message: "Lista de itens obtida com sucesso.",
+            data: formattedItems,
+            arrayName: "items",
+            pagination: {
+                totalItems: totalCount,
+                totalPages: totalPages,
+                currentPage: page,
+                itemsPerPage: limit,
+            },
+        });
     } catch (error) {
-      console.error("Erro ao buscar e agrupar itens:", error);
-      return handleResponse(res, 500, {
-        success: false,
-        error: "Erro interno do servidor",
-        details: error.message,
-      });
+        console.error("Erro ao buscar e agrupar itens:", error);
+        return handleResponse(res, 500, {
+            success: false,
+            error: "Erro interno do servidor",
+            details: error.message,
+        });
     }
-  }
-
+}
   static async filterItems(req, res) {
     try {
-      const { name, idCategory } = req.body;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 25;
-      const offset = (page - 1) * limit;
+        const { name, idCategory } = req.body;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 25;
+        const offset = (page - 1) * limit;
 
-      let query = `
+        let query = `
             SELECT
                 i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock, i.sapCode,
                 c.idCategory AS categoryId, c.categoryValue,
@@ -251,82 +250,82 @@ module.exports = class ItemController {
             LEFT JOIN technicalSpec ts ON its.fkIdTechnicalSpec = ts.idTechnicalSpec
             WHERE 1=1
         `;
-      let countQuery = `
+        let countQuery = `
             SELECT COUNT(DISTINCT i.idItem) as totalCount
             FROM item i
             WHERE 1=1
         `;
-      const queryParams = [];
-      const countQueryParams = [];
+        const queryParams = [];
+        const countQueryParams = [];
 
-      if (name) {
-        const normalizedName = `%${name
-          .trim()
-          .toLowerCase()
-          .replace(/\s/g, "")}%`;
-        query += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
-        countQuery += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
-        queryParams.push(normalizedName, normalizedName);
-        countQueryParams.push(normalizedName, normalizedName);
-      }
+        if (name) {
+            const normalizedName = `%${name
+                .trim()
+                .toLowerCase()
+                .replace(/\s/g, "")}%`;
+            query += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
+            countQuery += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
+            queryParams.push(normalizedName, normalizedName);
+            countQueryParams.push(normalizedName, normalizedName);
+        }
 
-      if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
-        const placeholders = idCategory.map(() => "?").join(",");
-        query += ` AND i.fkIdCategory IN (${placeholders})`;
-        countQuery += ` AND i.fkIdCategory IN (${placeholders})`;
-        queryParams.push(...idCategory);
-        countQueryParams.push(...idCategory);
-      }
+        if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
+            const placeholders = idCategory.map(() => "?").join(",");
+            query += ` AND i.fkIdCategory IN (${placeholders})`;
+            countQuery += ` AND i.fkIdCategory IN (${placeholders})`;
+            queryParams.push(...idCategory);
+            countQueryParams.push(...idCategory);
+        }
 
-      query += ` GROUP BY i.idItem, l.totalQuantity ORDER BY i.name LIMIT ? OFFSET ?`;
-      queryParams.push(limit, offset);
+        query += ` GROUP BY i.idItem, l.totalQuantity ORDER BY i.name LIMIT ? OFFSET ?`;
+        queryParams.push(limit, offset);
 
-      const items = await queryAsync(query, queryParams);
-      const [{ totalCount }] = await queryAsync(countQuery, countQueryParams);
-      const totalPages = Math.ceil(totalCount / limit);
+        const items = await queryAsync(query, queryParams);
+        const [{ totalCount }] = await queryAsync(countQuery, countQueryParams);
+        const totalPages = Math.ceil(totalCount / limit);
 
-      const formattedItems = items.map((item) => ({
-        idItem: item.idItem,
-        name: item.name,
-        aliases: item.aliases,
-        brand: item.brand,
-        description: item.description,
-        minimumStock: item.minimumStock,
-        sapCode: item.sapCode,
-        category: {
-          idCategory: item.categoryId,
-          value: item.categoryValue,
-        },
-        totalQuantity: item.totalQuantity || 0,
-        technicalSpecs:
-          item.technicalSpecs &&
-          item.technicalSpecs.length > 0 &&
-          item.technicalSpecs[0].idTechnicalSpec
-            ? item.technicalSpecs
-            : [],
-      }));
+        const formattedItems = items.map((item) => ({
+            idItem: item.idItem,
+            name: item.name,
+            aliases: item.aliases,
+            brand: item.brand,
+            description: item.description,
+            minimumStock: item.minimumStock,
+            sapCode: item.sapCode,
+            category: {
+                idCategory: item.categoryId,
+                value: item.categoryValue,
+            },
+            totalQuantity: item.totalQuantity || 0,
+            technicalSpecs:
+                item.technicalSpecs &&
+                item.technicalSpecs.length > 0 &&
+                item.technicalSpecs[0].idTechnicalSpec
+                    ? item.technicalSpecs
+                    : [],
+        }));
 
-      return handleResponse(res, 200, {
-        success: true,
-        message: "Itens filtrados com sucesso.",
-        data: formattedItems,
-        arrayName: "items",
-        pagination: {
-          totalItems: totalCount,
-          totalPages: totalPages,
-          currentPage: page,
-          itemsPerPage: limit,
-        },
-      });
+        return handleResponse(res, 200, {
+            success: true,
+            message: "Itens filtrados com sucesso.",
+            data: formattedItems,
+            arrayName: "items",
+            pagination: {
+                totalItems: totalCount,
+                totalPages: totalPages,
+                currentPage: page,
+                itemsPerPage: limit,
+            },
+        });
     } catch (error) {
-      console.error("Erro ao filtrar itens:", error);
-      return handleResponse(res, 500, {
-        success: false,
-        error: "Erro interno do servidor",
-        details: error.message,
-      });
+        console.error("Erro ao filtrar itens:", error);
+        return handleResponse(res, 500, {
+            success: false,
+            error: "Erro interno do servidor",
+            details: error.message,
+        });
     }
-  }
+}
 
   static async createItem(req, res) {
     const {
