@@ -1,10 +1,11 @@
-// src/docs/paths/locations.js
+// src/docs/paths/category.js
 
+// Rotas GET /category e POST /category
 module.exports = {
-  "/location": {
+  "/category": {
     get: {
-      summary: "Lista todas as localizações",
-      tags: ["Location"],
+      summary: "Lista todas as categorias",
+      tags: ["Category"],
       security: [
         {
           bearerAuth: [],
@@ -12,13 +13,23 @@ module.exports = {
       ],
       responses: {
         200: {
-          description: "Sucesso na obtenção da lista de localizações",
+          description: "Sucesso na obtenção da lista de categorias",
           content: {
             "application/json": {
               schema: {
-                type: "array",
-                items: {
-                  $ref: "#/components/schemas/Location",
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example: "Categorias obtidas com sucesso.",
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/Category",
+                    },
+                  },
                 },
               },
             },
@@ -29,8 +40,8 @@ module.exports = {
       },
     },
     post: {
-      summary: "Cria uma nova localização",
-      tags: ["Location"],
+      summary: "Cria uma nova categoria",
+      tags: ["Category"],
       security: [
         {
           bearerAuth: [],
@@ -41,14 +52,14 @@ module.exports = {
         content: {
           "application/json": {
             schema: {
-              $ref: "#/components/schemas/LocationInput",
+              $ref: "#/components/schemas/CategoryInput",
             },
           },
         },
       },
       responses: {
         201: {
-          description: "Localização criada com sucesso",
+          description: "Categoria criada com sucesso",
           content: {
             "application/json": {
               schema: {
@@ -57,14 +68,14 @@ module.exports = {
                   success: { type: "boolean", example: true },
                   message: {
                     type: "string",
-                    example: "Localização criada com sucesso!",
+                    example: "Categoria criada com sucesso!",
                   },
                   data: {
                     type: "object",
                     properties: {
-                      locationId: {
+                      categoryId: {
                         type: "integer",
-                        description: "ID da localização inserida",
+                        description: "ID da categoria inserida",
                       },
                     },
                   },
@@ -76,16 +87,19 @@ module.exports = {
         400: { $ref: "#/components/responses/BadRequest" },
         401: { $ref: "#/components/responses/Unauthorized" },
         403: { $ref: "#/components/responses/Forbidden" },
-        409: { $ref: "#/components/responses/Conflict" },
+        409: {
+          $ref: "#/components/responses/Conflict",
+          description: "Conflito (Ex: chave duplicada).",
+        },
         500: { $ref: "#/components/responses/InternalServerError" },
       },
     },
   },
-  "/location/{idLocation}": {
-    // Uso de idLocation conforme o parâmetro comum
+  // Rotas GET, PUT, DELETE /category/{idCategory}
+  "/category/{idCategory}": {
     get: {
-      summary: "Busca localização por ID",
-      tags: ["Location"],
+      summary: "Busca categoria por ID",
+      tags: ["Category"],
       security: [
         {
           bearerAuth: [],
@@ -93,16 +107,16 @@ module.exports = {
       ],
       parameters: [
         {
-          $ref: "#/components/parameters/idLocationParam",
+          $ref: "#/components/parameters/idCategoryParam",
         },
       ],
       responses: {
         200: {
-          description: "Sucesso na obtenção da localização",
+          description: "Sucesso na obtenção da categoria",
           content: {
             "application/json": {
               schema: {
-                $ref: "#/components/schemas/Location",
+                $ref: "#/components/schemas/Category",
               },
             },
           },
@@ -113,8 +127,8 @@ module.exports = {
       },
     },
     put: {
-      summary: "Atualiza uma localização por ID",
-      tags: ["Location"],
+      summary: "Atualiza uma categoria por ID",
+      tags: ["Category"],
       security: [
         {
           bearerAuth: [],
@@ -122,7 +136,7 @@ module.exports = {
       ],
       parameters: [
         {
-          $ref: "#/components/parameters/idLocationParam",
+          $ref: "#/components/parameters/idCategoryParam",
         },
       ],
       requestBody: {
@@ -130,7 +144,7 @@ module.exports = {
         content: {
           "application/json": {
             schema: {
-              $ref: "#/components/schemas/LocationInput",
+              $ref: "#/components/schemas/CategoryInput",
             },
           },
         },
@@ -141,13 +155,16 @@ module.exports = {
         401: { $ref: "#/components/responses/Unauthorized" },
         403: { $ref: "#/components/responses/Forbidden" },
         404: { $ref: "#/components/responses/NotFound" },
-        409: { $ref: "#/components/responses/Conflict" },
+        409: {
+          $ref: "#/components/responses/Conflict",
+          description: "Conflito (Ex: chave duplicada).",
+        },
         500: { $ref: "#/components/responses/InternalServerError" },
       },
     },
     delete: {
-      summary: "Exclui uma localização por ID",
-      tags: ["Location"],
+      summary: "Exclui uma categoria por ID",
+      tags: ["Category"],
       security: [
         {
           bearerAuth: [],
@@ -155,7 +172,7 @@ module.exports = {
       ],
       parameters: [
         {
-          $ref: "#/components/parameters/idLocationParam",
+          $ref: "#/components/parameters/idCategoryParam",
         },
       ],
       responses: {
@@ -163,7 +180,11 @@ module.exports = {
         401: { $ref: "#/components/responses/Unauthorized" },
         403: { $ref: "#/components/responses/Forbidden" },
         404: { $ref: "#/components/responses/NotFound" },
-        409: { $ref: "#/components/responses/Conflict" },
+        409: {
+          $ref: "#/components/responses/Conflict",
+          description:
+            "Conflito (Ex: chave estrangeira, a categoria está em uso).",
+        },
         500: { $ref: "#/components/responses/InternalServerError" },
       },
     },

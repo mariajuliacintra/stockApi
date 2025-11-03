@@ -1,10 +1,11 @@
-// src/docs/paths/locations.js
+// src/docs/paths/technicalSpec.js
 
 module.exports = {
-  "/location": {
+  // Rotas GET /technicalSpec e POST /technicalSpec
+  "/technicalSpec": {
     get: {
-      summary: "Lista todas as localizações",
-      tags: ["Location"],
+      summary: "Lista todas as especificações técnicas",
+      tags: ["Technical Spec"],
       security: [
         {
           bearerAuth: [],
@@ -12,13 +13,24 @@ module.exports = {
       ],
       responses: {
         200: {
-          description: "Sucesso na obtenção da lista de localizações",
+          description:
+            "Sucesso na obtenção da lista de especificações técnicas",
           content: {
             "application/json": {
               schema: {
-                type: "array",
-                items: {
-                  $ref: "#/components/schemas/Location",
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example: "Especificações técnicas obtidas com sucesso.",
+                  },
+                  data: {
+                    type: "array",
+                    items: {
+                      $ref: "#/components/schemas/TechnicalSpec",
+                    },
+                  },
                 },
               },
             },
@@ -29,8 +41,8 @@ module.exports = {
       },
     },
     post: {
-      summary: "Cria uma nova localização",
-      tags: ["Location"],
+      summary: "Cria uma nova especificação técnica",
+      tags: ["Technical Spec"],
       security: [
         {
           bearerAuth: [],
@@ -41,14 +53,14 @@ module.exports = {
         content: {
           "application/json": {
             schema: {
-              $ref: "#/components/schemas/LocationInput",
+              $ref: "#/components/schemas/TechnicalSpecInput",
             },
           },
         },
       },
       responses: {
         201: {
-          description: "Localização criada com sucesso",
+          description: "Especificação técnica criada com sucesso",
           content: {
             "application/json": {
               schema: {
@@ -57,14 +69,14 @@ module.exports = {
                   success: { type: "boolean", example: true },
                   message: {
                     type: "string",
-                    example: "Localização criada com sucesso!",
+                    example: "Especificação técnica criada com sucesso!",
                   },
                   data: {
                     type: "object",
                     properties: {
-                      locationId: {
+                      technicalSpecId: {
                         type: "integer",
-                        description: "ID da localização inserida",
+                        description: "ID da especificação técnica inserida",
                       },
                     },
                   },
@@ -76,16 +88,15 @@ module.exports = {
         400: { $ref: "#/components/responses/BadRequest" },
         401: { $ref: "#/components/responses/Unauthorized" },
         403: { $ref: "#/components/responses/Forbidden" },
-        409: { $ref: "#/components/responses/Conflict" },
         500: { $ref: "#/components/responses/InternalServerError" },
       },
     },
   },
-  "/location/{idLocation}": {
-    // Uso de idLocation conforme o parâmetro comum
+  // Rotas GET, PUT, DELETE /technicalSpec/{idTechnicalSpec}
+  "/technicalSpec/{idTechnicalSpec}": {
     get: {
-      summary: "Busca localização por ID",
-      tags: ["Location"],
+      summary: "Busca especificação técnica por ID",
+      tags: ["Technical Spec"],
       security: [
         {
           bearerAuth: [],
@@ -93,16 +104,16 @@ module.exports = {
       ],
       parameters: [
         {
-          $ref: "#/components/parameters/idLocationParam",
+          $ref: "#/components/parameters/idTechnicalSpecParam",
         },
       ],
       responses: {
         200: {
-          description: "Sucesso na obtenção da localização",
+          description: "Sucesso na obtenção da especificação técnica",
           content: {
             "application/json": {
               schema: {
-                $ref: "#/components/schemas/Location",
+                $ref: "#/components/schemas/TechnicalSpec",
               },
             },
           },
@@ -113,8 +124,8 @@ module.exports = {
       },
     },
     put: {
-      summary: "Atualiza uma localização por ID",
-      tags: ["Location"],
+      summary: "Atualiza uma especificação técnica por ID",
+      tags: ["Technical Spec"],
       security: [
         {
           bearerAuth: [],
@@ -122,7 +133,7 @@ module.exports = {
       ],
       parameters: [
         {
-          $ref: "#/components/parameters/idLocationParam",
+          $ref: "#/components/parameters/idTechnicalSpecParam",
         },
       ],
       requestBody: {
@@ -130,7 +141,7 @@ module.exports = {
         content: {
           "application/json": {
             schema: {
-              $ref: "#/components/schemas/LocationInput",
+              $ref: "#/components/schemas/TechnicalSpecInput",
             },
           },
         },
@@ -141,13 +152,12 @@ module.exports = {
         401: { $ref: "#/components/responses/Unauthorized" },
         403: { $ref: "#/components/responses/Forbidden" },
         404: { $ref: "#/components/responses/NotFound" },
-        409: { $ref: "#/components/responses/Conflict" },
         500: { $ref: "#/components/responses/InternalServerError" },
       },
     },
     delete: {
-      summary: "Exclui uma localização por ID",
-      tags: ["Location"],
+      summary: "Exclui uma especificação técnica por ID",
+      tags: ["Technical Spec"],
       security: [
         {
           bearerAuth: [],
@@ -155,7 +165,7 @@ module.exports = {
       ],
       parameters: [
         {
-          $ref: "#/components/parameters/idLocationParam",
+          $ref: "#/components/parameters/idTechnicalSpecParam",
         },
       ],
       responses: {
@@ -163,7 +173,11 @@ module.exports = {
         401: { $ref: "#/components/responses/Unauthorized" },
         403: { $ref: "#/components/responses/Forbidden" },
         404: { $ref: "#/components/responses/NotFound" },
-        409: { $ref: "#/components/responses/Conflict" },
+        409: {
+          $ref: "#/components/responses/Conflict",
+          description:
+            "Conflito de chave estrangeira (A especificação está associada a um item).",
+        },
         500: { $ref: "#/components/responses/InternalServerError" },
       },
     },
