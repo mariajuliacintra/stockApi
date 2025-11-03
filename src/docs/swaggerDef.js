@@ -26,5 +26,10 @@ module.exports = {
       name: "Category",
       description: "Gerenciamento de categorias de itens",
     },
+    {
+      name: "Lot",
+      description:
+        "Gerenciamento de lotes de itens (Entrada, Saída, Ajuste e Alterações)",
+    },
   ],
 };

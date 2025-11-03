@@ -5,9 +5,13 @@ const locationSchema = require("./schemas/locationSchema"); // Arquivo existente
 const userSchema = require("./schemas/userSchema"); // Novo arquivo de esquemas do usuário
 const errorResponses = require("./schemas/errorResponses"); // Arquivo de esquemas de erro
 const categorySchema = require("./schemas/categorySchema");
+const lotSchema = require("./schemas/lotSchema");
 const idLocationParam = require("./parameters/idLocationParam"); // Parâmetro de Localização
 const idUserParam = require("./parameters/idUserParam"); // Novo parâmetro de Usuário
 const idCategoryParam = require("./parameters/idCategoryParam");
+const idLotParam = require("./parameters/idLotParam");
+const idItemParam = require("./parameters/idItemParam");
+const sapCodeParam = require("./parameters/sapCodeParam");
 
 module.exports = {
   components: {
@@ -18,6 +22,8 @@ module.exports = {
       ...userSchema,
       // Esquemas de Categoria
       ...categorySchema,
+      // Esquemas de Lote
+      ...lotSchema,
       // Esquemas de Erro
       ...errorResponses,
     },
@@ -26,6 +32,9 @@ module.exports = {
       ...idLocationParam,
       ...idUserParam,
       ...idCategoryParam,
+      ...idLotParam,
+      ...idItemParam,
+      ...sapCodeParam,
     },
     securitySchemes: {
       bearerAuth: {
