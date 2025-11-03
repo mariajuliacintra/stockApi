@@ -57,13 +57,4 @@ const options = {
 // Gera a especificação final
 const swaggerSpec = swaggerJsdoc(options);
 
-// VERIFICAÇÃO FINAL simplificada
-const finalPathCount = swaggerSpec.paths ? Object.keys(swaggerSpec.paths).length : 0;
-if (finalPathCount === 0) {
-    console.warn("⚠️ ALERTA SWAGGER: Nenhuma rota ('paths') encontrada na especificação final!");
-} else {
-    // Feedback simples de sucesso
-    console.log(`✅ SWAGGER: ${finalPathCount} rotas carregadas com sucesso.`);
-}
-
 module.exports = swaggerSpec;
