@@ -31,5 +31,10 @@ module.exports = {
       description:
         "Gerenciamento de lotes de itens (Entrada, Saída, Ajuste e Alterações)",
     },
+    {
+      name: "Technical Spec",
+      description:
+        "Gerenciamento de chaves para especificações técnicas de itens (ex: Cor, Tensão)",
+    },
   ],
 };

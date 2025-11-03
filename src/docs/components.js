@@ -6,12 +6,14 @@ const userSchema = require("./schemas/userSchema"); // Novo arquivo de esquemas 
 const errorResponses = require("./schemas/errorResponses"); // Arquivo de esquemas de erro
 const categorySchema = require("./schemas/categorySchema");
 const lotSchema = require("./schemas/lotSchema");
+const technicalSpecSchema = require("./schemas/technicalSpecSchema");
 const idLocationParam = require("./parameters/idLocationParam"); // Parâmetro de Localização
 const idUserParam = require("./parameters/idUserParam"); // Novo parâmetro de Usuário
 const idCategoryParam = require("./parameters/idCategoryParam");
 const idLotParam = require("./parameters/idLotParam");
 const idItemParam = require("./parameters/idItemParam");
 const sapCodeParam = require("./parameters/sapCodeParam");
+const idTechnicalSpecParam = require("./parameters/idTechnicalSpecParam");
 
 module.exports = {
   components: {
@@ -24,6 +26,8 @@ module.exports = {
       ...categorySchema,
       // Esquemas de Lote
       ...lotSchema,
+      // Esquemas de Especificação Técnica
+      ...technicalSpecSchema,
       // Esquemas de Erro
       ...errorResponses,
     },
@@ -35,6 +39,7 @@ module.exports = {
       ...idLotParam,
       ...idItemParam,
       ...sapCodeParam,
+      ...idTechnicalSpecParam,
     },
     securitySchemes: {
       bearerAuth: {
