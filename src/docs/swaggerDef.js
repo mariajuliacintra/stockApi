@@ -2,7 +2,8 @@
 module.exports = {
   info: {
     title: "SENAI Estoque API",
-    description: "Documentação da API do sistema de controle de estoque do SENAI. Utilize o botão 'Authorize' para inserir o JWT (Bearer Token) após o login.",
+    description:
+      "Documentação da API do sistema de controle de estoque do SENAI. Utilize o botão 'Authorize' para inserir o JWT (Bearer Token) após o login.",
     version: "1.2.1",
   },
   servers: [
@@ -21,6 +22,9 @@ module.exports = {
       name: "Location",
       description: "Gerenciamento de locais de estoque",
     },
-    // Adicione outras tags conforme necessário
-  ]
+    {
+      name: "Category",
+      description: "Gerenciamento de categorias de itens",
+    },
+  ],
 };
