@@ -27,6 +27,9 @@ services:
     volumes:
       - .:/usr/app
       - /usr/app/node_modules
+      - /etc/letsencrypt:/etc/letsencrypt # Monta o volume dos certificados
+    working_dir: /usr/app # Define o diretório de trabalho dentro do container
+
     environment:
       # Passando a variável do .env para a sua aplicação
       - MYSQL_ROOT_PASSWORD=${DATABASEPASSWORD}
