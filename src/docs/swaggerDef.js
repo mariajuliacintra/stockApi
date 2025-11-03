@@ -16,7 +16,7 @@ module.exports = {
       description: "Servidor Local de Desenvolvimento (Porta padrão 5000)",
     },
   ],
-  // Você pode adicionar tags aqui se desejar que apareçam na ordem correta
+
   tags: [
     {
       name: "Location",
@@ -35,6 +35,11 @@ module.exports = {
       name: "Technical Spec",
       description:
         "Gerenciamento de chaves para especificações técnicas de itens (ex: Cor, Tensão)",
+    },
+    {
+      name: "Transaction",
+      description:
+        "Registro de movimentações de estoque e consultas de histórico.",
     },
   ],
 };
