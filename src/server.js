@@ -1,20 +1,23 @@
+const fs = require('fs');
+const https = require('https');
+const http = require('http');
 const app = require("./index");
-const cors = require("cors");
-const testConnect = require('./db/testConnect');
 
-const port = process.env.PORT || 5000;
-
-testConnect();
-
-const corsOptions = {
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-    optionsSucessStatus: 204,
+// Opções para o HTTPS com os certificados gerados
+const options = {
+  key: fs.readFileSync('/etc/letsencrypt/live/maju-api.eastus2.cloudapp.azure.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/maju-api.eastus2.cloudapp.azure.com/fullchain.pem')
 };
 
-app.use(cors(corsOptions));
+// Iniciar o servidor HTTPS na porta 5000
+https.createServer(options, app).listen(5000, () => {
+  console.log('Servidor HTTPS rodando na porta 5000');
+});
 
-app.listen(port, () => {
-    console.log(`Servidor rodando na porta ${port}`);
+// (Opcional) Redirecionar HTTP para HTTPS
+http.createServer((req, res) => {
+  res.writeHead(301, { "Location": `https://${req.headers.host}${req.url}` });
+  res.end();
+}).listen(80, () => {
+  console.log('Redirecionamento HTTP para HTTPS habilitado na porta 80');
 });

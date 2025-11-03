@@ -26,6 +26,8 @@ services:
       - "5000:5000"
     volumes:
       - .:/usr/app
+      - /etc/letsencrypt:/etc/letsencrypt # Monta o volume dos certificados
+    working_dir: /usr/app # Define o diretório de trabalho dentro do container
       - /usr/app/node_modules
     environment:
       # Passando a variável do .env para a sua aplicação
