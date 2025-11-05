@@ -38,7 +38,7 @@ jobs:
         with:
           host: ${{ secrets.SSHHOST }}
           username: ${{ secrets.SSHUSERNAME }}
-          key: ${{ secrets.SSHPRIVATE_KEY }}
+          key: ${{ secrets.SSHPRIVATEKEY }}
           script: |
             echo "Conectado na VM e atualizando..."
             NEW_TAG=${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
