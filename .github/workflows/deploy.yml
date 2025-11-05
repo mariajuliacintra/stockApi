@@ -15,10 +15,6 @@ jobs:
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
-
-      - name: Definir a Tag
-        id: set_version
-        run: echo "VERSION=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
         
       - name: Login no Docker Hub
         uses: docker/login-action@v3
@@ -26,26 +22,26 @@ jobs:
           username: ${{ secrets.DOCKERUSERNAME }}
           password: ${{ secrets.DOCKERPASSWORD }}
 
-      - name: Build e Push da Imagem Docker
+      - name: Build e Push da Imagem Docker (com tag latest)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
+          tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:latest 
 
       - name: Deploy na VM via SSH (com Chave)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSHHOST }}
           username: ${{ secrets.SSHUSERNAME }}
-          key: ${{ secrets.SSHPRIVATEKEY }}
+          key: ${{ secrets.SSHPRIVATE_KEY }}
           script: |
             echo "Conectado na VM e atualizando..."
-            NEW_TAG=${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
+            LATEST_TAG="${{ secrets.DOCKERUSERNAME }}/stockapi:latest"
             
             cd stockapi 
 
-            sed -i "s|image: ${{ secrets.DOCKERUSERNAME }}/stockapi:.*|image: $NEW_TAG|g" docker-compose.yml
+            sed -i "s|image: ${{ secrets.DOCKERUSERNAME }}/stockapi:.*|image: $LATEST_TAG|g" docker-compose.yml
             
             docker-compose down
             
@@ -53,6 +49,6 @@ jobs:
             
             docker-compose up -d 
             
-            echo "Deploy concluído com sucesso com a tag $NEW_TAG"
+            echo "Deploy concluído com sucesso com a tag latest"
             
             docker image prune -f
