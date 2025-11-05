@@ -33,12 +33,12 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
 
-      - name: Deploy na VM via SSH
+      - name: Deploy na VM via SSH (com Chave)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSHHOST }}
           username: ${{ secrets.SSHUSERNAME }}
-          key: ${{ secrets.SSHPRIVATEKEY }}
+          key: ${{ secrets.SSHPRIVATE_KEY }}
           script: |
             echo "Conectado na VM e atualizando..."
             NEW_TAG=${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
@@ -47,11 +47,11 @@ jobs:
 
             sed -i "s|image: .*|image: $NEW_TAG|g" docker-compose.yml
             
-            docker-compose rm -f db 
+            docker-compose down
             
             docker-compose pull app 
             
-            docker-compose up -d --force-recreate app 
+            docker-compose up -d 
             
             echo "Deploy concluído com sucesso com a tag $NEW_TAG"
             
