@@ -1,4 +1,4 @@
-name: CI/CD Docker na VM com Senha
+name: CI/CD Docker na VM com Chave SSH
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment: Production
 
     steps:
@@ -33,12 +33,12 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
 
-      - name: Deploy na VM via SSH (com Senha)
+      - name: Deploy na VM via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSHHOST }}
           username: ${{ secrets.SSHUSERNAME }}
-          password: ${{ secrets.SSHPASSWORD }}
+          key: ${{ secrets.SSHPRIVATEKEY }}
           script: |
             echo "Conectado na VM e atualizando..."
             NEW_TAG=${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
