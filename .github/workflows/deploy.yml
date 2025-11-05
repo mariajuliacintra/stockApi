@@ -45,7 +45,7 @@ jobs:
             
             cd stockapi 
 
-            sed -i "s|image: .*|image: $NEW_TAG|g" docker-compose.yml
+            sed -i "s|image: ${{ secrets.DOCKERUSERNAME }}/stockapi:.*|image: $NEW_TAG|g" docker-compose.yml
             
             docker-compose down
             
