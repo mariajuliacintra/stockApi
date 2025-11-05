@@ -47,8 +47,11 @@ jobs:
 
             sed -i "s|image: .*|image: $NEW_TAG|g" docker-compose.yml
             
+            docker-compose rm -f db 
+            
             docker-compose pull app 
-            docker-compose up -d --force-recreate app
+            
+            docker-compose up -d --force-recreate app 
             
             echo "Deploy concluído com sucesso com a tag $NEW_TAG"
             
