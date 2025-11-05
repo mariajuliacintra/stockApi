@@ -1,0 +1,55 @@
+name: CI/CD Docker na VM com Senha
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: Production
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Definir a Tag
+        id: set_version
+        run: echo "VERSION=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+        
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERUSERNAME }}
+          password: ${{ secrets.DOCKERPASSWORD }}
+
+      - name: Build e Push da Imagem Docker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
+
+      - name: Deploy na VM via SSH (com Senha)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSHHOST }}
+          username: ${{ secrets.SSHUSERNAME }}
+          password: ${{ secrets.SSHPASSWORD }}
+          script: |
+            echo "Conectado na VM e atualizando..."
+            NEW_TAG=${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.set_version.outputs.VERSION }}
+            
+            cd stockapi 
+
+            sed -i "s|image: .*|image: $NEW_TAG|g" docker-compose.yml
+            
+            docker-compose pull app 
+            docker-compose up -d --force-recreate app
+            
+            echo "Deploy concluído com sucesso com a tag $NEW_TAG"
+            
+            docker image prune -f
