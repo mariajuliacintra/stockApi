@@ -124,7 +124,7 @@ GEMINIAPIKEY= "{Chave da Api da Google}"
 
 ## Documentação Completa dos Endpoints
 
-- Documentação Completa - [Notion](https://www.notion.so/endpoints-24c9ea6603bd81a19209f3446f846808)
+**🔗 Documentação da API (Swagger UI):** [Acessar Documentação](https://senai604estoque.eastus2.cloudapp.azure.com/api-docs/)
 
 ## Autores
 
@@ -133,3 +133,4 @@ GEMINIAPIKEY= "{Chave da Api da Google}"
 - [@guelin](https://github.com/m1guelzin)
 
 - [@yasmin](https://github.com/souzayasmin)
+
