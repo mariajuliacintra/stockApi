@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Production
+    environment: deploy
 
     steps:
       - name: Checkout do Código
@@ -29,7 +29,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:latest 
 
-      - name: Deploy na VM via SSH (com Chave)
+      - name: Deploy na VM via SSH (com Chave SSH)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSHHOST }}
