@@ -1,34 +1,44 @@
-// tests/services/validateUser.test.js
+const { validateUser, findUserByEmailAndActiveStatus, validateLogin, validateUpdate, validateRecovery } = require('../../services/validateUser');
+const { validateDomain, validatePassword, queryAsync } = require('../../utils/functions');
 
-// Mocka utils/functions.js para controlar validateDomain e validatePassword
-jest.mock('../../src/utils/functions', () => ({
+const mockClosePool = jest.fn().mockResolvedValue(true);
+
+jest.mock('../../utils/functions', () => ({
   validateDomain: jest.fn(),
   validatePassword: jest.fn(),
-  queryAsync: jest.fn(), // Necessário pois validateEmail e findUserByEmailAndActiveStatus usam queryAsync
+  queryAsync: jest.fn(),
 }));
 
-// Importa as funções que você vai testar e os mocks das dependências
-const { validateUser, validateEmail, findUserByEmailAndActiveStatus, validateLogin, validateUpdate, validateRecovery } = require('../../services/validateUser');
-const { validateDomain, validatePassword, queryAsync } = require('../../utils/functions'); // Importa os mocks
+jest.mock('../../db/connect', () => ({
+  query: jest.fn(),
+  closePool: mockClosePool,
+}));
+
+const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+afterAll(async () => {
+  mockConsoleError.mockRestore();
+  mockConsoleLog.mockRestore();
+  await mockClosePool();
+});
 
 describe('validateUser', () => {
-  // Limpa os mocks antes de cada teste para garantir isolamento
   beforeEach(() => {
     jest.clearAllMocks();
-    // Define valores padrão para os mocks que serão chamados
-    validateDomain.mockReturnValue(null); // Por padrão, o domínio é válido
-    validatePassword.mockReturnValue(true); // Por padrão, a senha é válida
-    queryAsync.mockResolvedValue([]); // Por padrão, email não existe
+    validateDomain.mockReturnValue(null);
+    validatePassword.mockReturnValue(true);
+    queryAsync.mockResolvedValue([]);
   });
 
   it('deve retornar erro se algum campo obrigatório estiver faltando', () => {
-    const result = validateUser({}); // Objeto vazio
+    const result = validateUser({});
     expect(result.error).toBe('Todos os campos devem ser preenchidos');
     expect(result.details).toContain("'name', 'email', 'password' e 'confirmPassword' são obrigatórios");
   });
 
   it('deve retornar erro se o domínio do email for inválido', () => {
-    validateDomain.mockReturnValue({ error: 'Domínio inválido' }); // Simula erro de domínio
+    validateDomain.mockReturnValue({ error: 'Domínio inválido' });
     const result = validateUser({ name: 'Test', email: 'test@invalid.com', password: 'Password@123', confirmPassword: 'Password@123' });
     expect(result.error).toBe('Domínio inválido');
     expect(result.details).toContain('domínio válido');
@@ -42,7 +52,7 @@ describe('validateUser', () => {
   });
 
   it('deve retornar erro se a senha for fraca', () => {
-    validatePassword.mockReturnValue(false); // Simula senha fraca
+    validatePassword.mockReturnValue(false);
     const result = validateUser({ name: 'Test', email: 'test@senai.br', password: 'weak', confirmPassword: 'weak' });
     expect(result.error).toBe('A senha é muito fraca.');
     expect(result.details).toContain('mínimo 8 caracteres');
@@ -77,14 +87,15 @@ describe('findUserByEmailAndActiveStatus', () => {
   it('deve retornar null se ocorrer um erro no banco', async () => {
     queryAsync.mockRejectedValueOnce(new Error('DB connection error'));
     const result = await findUserByEmailAndActiveStatus('error@sp.senai.br', false);
-    expect(result).toBeNull(); // A função retorna null em caso de erro
+    expect(result).toBeNull();
+    expect(mockConsoleError).toHaveBeenCalled();
   });
 });
 
 describe('validateLogin', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    validateDomain.mockReturnValue(null); // Domínio válido por padrão
+    validateDomain.mockReturnValue(null);
   });
 
   it('deve retornar erro se email ou senha estiverem faltando', () => {
@@ -186,4 +197,3 @@ describe('validateRecovery', () => {
     expect(result).toBeNull();
   });
 });
-
