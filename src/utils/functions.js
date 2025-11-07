@@ -1,4 +1,4 @@
-const connect = require("../db/connect");
+const { pool } = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const tokenSecret = process.env.SECRETKEY;
 
@@ -13,7 +13,7 @@ const handleResponse = (
       message: message || "Operação realizada com sucesso.",
       details: details || null,
     };
-    
+
     if (pagination !== undefined) {
       responseBody.pagination = pagination;
     }
@@ -35,7 +35,7 @@ const handleResponse = (
 
 const queryAsync = (query, values = []) => {
   return new Promise((resolve, reject) => {
-    connect.query(query, values, (err, results) => {
+    pool.query(query, values, (err, results) => {
       if (err) {
         reject(err);
       } else {
