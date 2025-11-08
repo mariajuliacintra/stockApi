@@ -1,14 +1,14 @@
-// src/docs/swaggerDef.js
 module.exports = {
+  openapi: "3.0.0",
   info: {
     title: "SENAI Estoque API",
     description:
       "Documentação da API do sistema de controle de estoque do SENAI. Utilize o botão 'Authorize' para inserir o JWT (Bearer Token) após o login.",
-    version: "1.2.1",
+    version: "1.2.2",
   },
   servers: [
     {
-      url: "https://senaiestoque.duckdns.org/api",
+      url: "https://senai604estoque.eastus2.cloudapp.azure.com/api",
       description: "Servidor de Produção",
     },
     {
@@ -16,7 +16,6 @@ module.exports = {
       description: "Servidor Local de Desenvolvimento (Porta padrão 5000)",
     },
   ],
-
   tags: [
     {
       name: "Location",
@@ -40,6 +39,22 @@ module.exports = {
       name: "Transaction",
       description:
         "Registro de movimentações de estoque e consultas de histórico.",
+    },
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        description:
+          "Insira o JWT (Bearer Token) obtido após o login no campo de valor. Ex: **eyJh...**",
+      },
+    },
+  },
+  security: [
+    {
+      bearerAuth: [],
     },
   ],
 };
