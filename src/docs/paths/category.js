@@ -8,7 +8,7 @@ module.exports = {
       tags: ["Category"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       responses: {
@@ -44,7 +44,7 @@ module.exports = {
       tags: ["Category"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       requestBody: {
@@ -102,7 +102,7 @@ module.exports = {
       tags: ["Category"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [
@@ -131,7 +131,7 @@ module.exports = {
       tags: ["Category"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [
@@ -167,7 +167,7 @@ module.exports = {
       tags: ["Category"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [

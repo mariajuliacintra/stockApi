@@ -6,7 +6,7 @@ module.exports = {
     post: {
       summary: "Cria um novo lote, buscando o ID do Item pelo Código SAP",
       tags: ["Lot"],
-      security: [{ bearerAuth: [] }],
+      security: [{ jwtAuth: [] }],
       parameters: [{ $ref: "#/components/parameters/sapCodeParam" }],
       requestBody: {
         required: true,
@@ -66,7 +66,7 @@ module.exports = {
     post: {
       summary: "Cria um novo lote diretamente pelo ID do Item",
       tags: ["Lot"],
-      security: [{ bearerAuth: [] }],
+      security: [{ jwtAuth: [] }],
       parameters: [{ $ref: "#/components/parameters/idItemParam" }],
       requestBody: {
         required: true,
@@ -122,7 +122,7 @@ module.exports = {
     put: {
       summary: "Atualiza a quantidade de um lote e registra a transação",
       tags: ["Lot"],
-      security: [{ bearerAuth: [] }],
+      security: [{ jwtAuth: [] }],
       parameters: [{ $ref: "#/components/parameters/idLotParam" }],
       requestBody: {
         required: true,
@@ -156,7 +156,7 @@ module.exports = {
     put: {
       summary: "Atualiza a data de validade e/ou a localização de um lote",
       tags: ["Lot"],
-      security: [{ bearerAuth: [] }],
+      security: [{ jwtAuth: [] }],
       parameters: [{ $ref: "#/components/parameters/idLotParam" }],
       requestBody: {
         required: true,
@@ -191,7 +191,7 @@ module.exports = {
     delete: {
       summary: "Exclui um lote por ID",
       tags: ["Lot"],
-      security: [{ bearerAuth: [] }],
+      security: [{ jwtAuth: [] }],
       parameters: [{ $ref: "#/components/parameters/idLotParam" }],
       responses: {
         200: { $ref: "#/components/responses/SuccessMessage" },

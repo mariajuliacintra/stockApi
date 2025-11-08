@@ -23,7 +23,7 @@ module.exports = {
         "post": {
             "summary": "Cadastra um novo usuário por um gerente.",
             "tags": ["User - Gerenciamento"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "requestBody": {
                 "required": true,
                 "content": {
@@ -83,7 +83,7 @@ module.exports = {
         "get": {
             "summary": "Busca dados do usuário por ID (apenas o próprio usuário).",
             "tags": ["User - Perfil"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [{ "$ref": "#/components/parameters/idUserParam" }],
             "responses": {
                 "200": { "description": "Dados do usuário obtidos.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } },
@@ -96,7 +96,7 @@ module.exports = {
         "put": {
             "summary": "Atualiza o perfil do usuário (requer verificação de e-mail se alterado).",
             "tags": ["User - Perfil"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [{ "$ref": "#/components/parameters/idUserParam" }],
             "requestBody": {
                 "required": true,
@@ -117,7 +117,7 @@ module.exports = {
         "delete": {
             "summary": "Desativa o usuário (soft delete).",
             "tags": ["User - Perfil"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [{ "$ref": "#/components/parameters/idUserParam" }],
             "responses": {
                 "200": { "description": "Usuário desativado com sucesso." },
@@ -151,7 +151,7 @@ module.exports = {
         "post": {
             "summary": "Valida se a senha informada corresponde à senha do usuário.",
             "tags": ["User - Perfil"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [{ "$ref": "#/components/parameters/idUserParam" }],
             "requestBody": {
                 "required": true,
@@ -172,7 +172,7 @@ module.exports = {
         "get": {
             "summary": "Lista todos os usuários ativos com paginação (Apenas Gerentes).",
             "tags": ["User - Gerenciamento"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [
                 { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
                 { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 25 } }

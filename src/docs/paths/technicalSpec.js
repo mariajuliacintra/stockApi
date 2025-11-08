@@ -8,7 +8,7 @@ module.exports = {
       tags: ["Technical Spec"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       responses: {
@@ -45,7 +45,7 @@ module.exports = {
       tags: ["Technical Spec"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       requestBody: {
@@ -99,7 +99,7 @@ module.exports = {
       tags: ["Technical Spec"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [
@@ -128,7 +128,7 @@ module.exports = {
       tags: ["Technical Spec"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [
@@ -160,7 +160,7 @@ module.exports = {
       tags: ["Technical Spec"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [

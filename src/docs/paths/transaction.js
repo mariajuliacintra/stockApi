@@ -6,7 +6,7 @@ module.exports = {
         "get": {
             "summary": "Lista todas as transações registradas",
             "tags": ["Transaction"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "responses": {
                 "200": {
                     "description": "Sucesso na obtenção da lista de transações",
@@ -34,7 +34,7 @@ module.exports = {
         "post": {
             "summary": "Registra uma nova transação e atualiza o saldo do Lote e do Item",
             "tags": ["Transaction"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "requestBody": {
                 "required": true,
                 "content": {
@@ -86,7 +86,7 @@ module.exports = {
         "get": {
             "summary": "Busca uma transação específica por ID",
             "tags": ["Transaction"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [{ "$ref": "#/components/parameters/idTransactionParam" }],
             "responses": {
                 "200": {
@@ -106,7 +106,7 @@ module.exports = {
         "get": {
             "summary": "Lista transações por ID do Item associado ao Lote",
             "tags": ["Transaction"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [{ "$ref": "#/components/parameters/idItemParam" }],
             "responses": {
                 "200": {
@@ -137,7 +137,7 @@ module.exports = {
         "get": {
             "summary": "Lista transações por ID do Usuário (apenas transações do próprio usuário ou acesso de Gerente)",
             "tags": ["Transaction"],
-            "security": [{ "bearerAuth": [] }],
+            "security": [{ "jwtAuth": [] }],
             "parameters": [{ "$ref": "#/components/parameters/idUserParam" }],
             "responses": {
                 "200": {

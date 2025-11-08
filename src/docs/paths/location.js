@@ -7,7 +7,7 @@ module.exports = {
       tags: ["Location"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       responses: {
@@ -33,7 +33,7 @@ module.exports = {
       tags: ["Location"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       requestBody: {
@@ -88,7 +88,7 @@ module.exports = {
       tags: ["Location"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [
@@ -117,7 +117,7 @@ module.exports = {
       tags: ["Location"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [
@@ -150,7 +150,7 @@ module.exports = {
       tags: ["Location"],
       security: [
         {
-          bearerAuth: [],
+          jwtAuth: [],
         },
       ],
       parameters: [

@@ -37,11 +37,11 @@ module.exports = {
       ...idTransactionParam,
     },
     securitySchemes: {
-      bearerAuth: {
-        type: "http",
-        scheme: "bearer",
-        bearerFormat: "JWT",
-        description: "Autenticação via Token JWT. Exemplo: 'Bearer <token>'",
+      jwtAuth: {
+        type: "apiKey",
+        in: "header",
+        name: "Authorization",
+        description: "Insira o JWT (apenas o token) obtido após o login no campo de valor. Ex: **eyJh...**",
       },
     },
     responses: {

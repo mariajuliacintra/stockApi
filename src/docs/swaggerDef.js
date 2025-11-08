@@ -3,7 +3,7 @@ module.exports = {
   info: {
     title: "SENAI Estoque API",
     description:
-      "Documentação da API do sistema de controle de estoque do SENAI. Utilize o botão 'Authorize' para inserir o JWT (Bearer Token) após o login.",
+      "Documentação da API do sistema de controle de estoque do SENAI. Utilize o botão 'Authorize' para inserir o JWT (apenas o valor do token) após o login.",
     version: "1.2.2",
   },
   servers: [
@@ -43,18 +43,18 @@ module.exports = {
   ],
   components: {
     securitySchemes: {
-      bearerAuth: {
-        type: "http",
-        scheme: "bearer",
-        bearerFormat: "JWT",
+      jwtAuth: {
+        type: "apiKey",
+        in: "header",
+        name: "Authorization",
         description:
-          "Insira o JWT (Bearer Token) obtido após o login no campo de valor. Ex: **eyJh...**",
+          "Insira o JWT (apenas o token) obtido após o login no campo de valor. Ex: **eyJh...**",
       },
     },
   },
   security: [
     {
-      bearerAuth: [],
+      jwtAuth: [],
     },
   ],
 };
