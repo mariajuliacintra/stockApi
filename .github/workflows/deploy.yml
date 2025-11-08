@@ -8,26 +8,32 @@ on:
       - '**.md'
 
 jobs:
-  build-and-deploy:
+  build-test:
     runs-on: ubuntu-latest
-    environment: deploy
-
+    
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
 
-      # --- Nova Seção para Testes Unitários ---
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.14.0'
-
-      - name: Instalar Dependências
+          
+      - name: Cache de Dependências Node.js
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+          
+      - name: Instalar Dependências (Com Cache)
         run: npm install
-
+        
       - name: Executar Testes Unitários com npm test
         run: npm test
-
+        
       - name: Login no Docker Hub
         uses: docker/login-action@v3
         with:
@@ -41,6 +47,12 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:latest 
 
+  deploy:
+    runs-on: ubuntu-latest
+    environment: deploy
+    needs: build-test
+
+    steps:
       - name: Deploy na VM via SSH (com Chave SSH)
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -56,9 +68,7 @@ jobs:
             sed -i "s|image: ${{ secrets.DOCKERUSERNAME }}/stockapi:.*|image: $LATEST_TAG|g" docker-compose.yml
             
             docker-compose down
-            
             docker-compose pull app 
-            
             docker-compose up -d 
             
             echo "Deploy concluído com sucesso com a tag latest"

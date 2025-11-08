@@ -1,16 +1,13 @@
-// src/docs/components.js
-
-// Importa esquemas e parâmetros
-const locationSchema = require("./schemas/locationSchema"); // Arquivo existente
-const userSchema = require("./schemas/userSchema"); // Novo arquivo de esquemas do usuário
-const errorResponses = require("./schemas/errorResponses"); // Arquivo de esquemas de erro
+const locationSchema = require("./schemas/locationSchema");
+const userSchema = require("./schemas/userSchema");
+const errorResponses = require("./schemas/errorResponses");
 const categorySchema = require("./schemas/categorySchema");
 const lotSchema = require("./schemas/lotSchema");
 const technicalSpecSchema = require("./schemas/technicalSpecSchema");
 const transactionSchema = require("./schemas/transactionSchema");
 
-const idLocationParam = require("./parameters/idLocationParam"); // Parâmetro de Localização
-const idUserParam = require("./parameters/idUserParam"); // Novo parâmetro de Usuário
+const idLocationParam = require("./parameters/idLocationParam");
+const idUserParam = require("./parameters/idUserParam");
 const idCategoryParam = require("./parameters/idCategoryParam");
 const idLotParam = require("./parameters/idLotParam");
 const idItemParam = require("./parameters/idItemParam");
@@ -21,23 +18,15 @@ const idTransactionParam = require("./parameters/idTransactionParam");
 module.exports = {
   components: {
     schemas: {
-      // Esquemas de Localização
       ...locationSchema,
-      // Esquemas de Usuário (resolve os erros de referência)
       ...userSchema,
-      // Esquemas de Categoria
       ...categorySchema,
-      // Esquemas de Lote
       ...lotSchema,
-      // Esquemas de Especificação Técnica
       ...technicalSpecSchema,
-      // Esquemas de Transação
       ...transactionSchema,
-      // Esquemas de Erro
       ...errorResponses,
     },
     parameters: {
-      // Parâmetros reutilizáveis
       ...idLocationParam,
       ...idUserParam,
       ...idCategoryParam,
@@ -56,7 +45,6 @@ module.exports = {
       },
     },
     responses: {
-      // Respostas de Sucesso
       SuccessMessage: {
         description: "Operação bem-sucedida, sem retorno de dados específicos.",
         content: {
@@ -74,9 +62,8 @@ module.exports = {
           },
         },
       },
-      // Respostas de Erro Comuns (Baseado no errorResponses.js)
       BadRequest: {
-        description: "Requisição inválida (Ex: campos obrigatórios ausentes).",
+        description: "Requisição inválida (Ex: campos obrigatórios ausentes ou formato incorreto).",
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/ErrorResponse" },
@@ -96,7 +83,7 @@ module.exports = {
           "Não autorizado (Usuário não tem a permissão necessária - Ex: não é 'manager' ou não pode acessar o recurso).",
       },
       NotFound: {
-        description: "Recurso não encontrado (ID não existe).",
+        description: "Recurso não encontrado (ID fornecido não existe).",
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/ErrorResponse" },
@@ -110,7 +97,7 @@ module.exports = {
       },
       Conflict: {
         description:
-          "Conflito (Ex: chave duplicada ou restrição de chave estrangeira).",
+          "Conflito (Ex: chave duplicada ou restrição de chave estrangeira que impede a operação).",
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/ErrorResponse" },
@@ -129,7 +116,7 @@ module.exports = {
         },
       },
       InternalServerError: {
-        description: "Erro interno do servidor.",
+        description: "Erro interno do servidor (geralmente erro não tratado pelo backend).",
         content: {
           "application/json": {
             schema: { $ref: "#/components/schemas/ErrorResponse" },
