@@ -1,8 +1,16 @@
+const {
+    queryAsync,
+    validateDomain,
+    validatePassword,
+    generateRandomCode
+} = require("../../utils/functions");
+
 const connect = require("../../db/connect");
-const { queryAsync, validateDomain, validatePassword, generateRandomCode } = require("../../utils/functions");
 
 jest.mock("../../db/connect", () => ({
-    query: jest.fn(),
+    pool: {
+        query: jest.fn(),
+    },
     closePool: jest.fn().mockResolvedValue(true),
 }));
 
@@ -23,13 +31,17 @@ describe("validateDomain", () => {
     it("deve retornar um objeto de erro para um domínio inválido", () => {
         const email = "usuario@empresa.com";
         const result = validateDomain(email);
-        expect(result).toEqual({ error: "Email inválido. Deve pertencer a um domínio SENAI autorizado" });
+        expect(result).toEqual({
+            error: "Email inválido. Deve pertencer a um domínio SENAI autorizado"
+        });
     });
 
     it("deve retornar um objeto de erro se o email não tiver o caractere '@'", () => {
         const email = "emailinvalido.com";
         const result = validateDomain(email);
-        expect(result).toEqual({ error: "Email inválido. Deve conter @" });
+        expect(result).toEqual({
+            error: "Email inválido. Deve conter @"
+        });
     });
 });
 
@@ -86,23 +98,27 @@ describe("queryAsync", () => {
     });
 
     it("deve resolver a promise com os resultados em caso de sucesso", async () => {
-        const mockResults = [{ id: 1, name: "Teste" }];
-        connect.query.mockImplementationOnce((query, values, callback) => {
+        const mockResults = [{
+            id: 1,
+            name: "Teste"
+        }];
+        connect.pool.query.mockImplementationOnce((query, values, callback) => {
             callback(null, mockResults);
         });
 
         const results = await queryAsync("SELECT * FROM table", []);
         expect(results).toEqual(mockResults);
-        expect(connect.query).toHaveBeenCalledWith("SELECT * FROM table", [], expect.any(Function));
+        expect(connect.pool.query).toHaveBeenCalledWith("SELECT * FROM table", [], expect.any(Function));
         expect(mockConsoleError).not.toHaveBeenCalled();
     });
 
     it("deve rejeitar a promise com um erro em caso de falha", async () => {
         const mockError = new Error("Erro no banco de dados");
-        connect.query.mockImplementationOnce((query, values, callback) => {
+        connect.pool.query.mockImplementationOnce((query, values, callback) => {
             callback(mockError, null);
         });
 
         await expect(queryAsync("SELECT * FROM table", [])).rejects.toThrow("Erro no banco de dados");
+        expect(connect.pool.query).toHaveBeenCalledWith("SELECT * FROM table", [], expect.any(Function));
     });
 });
