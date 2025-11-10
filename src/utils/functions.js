@@ -71,8 +71,8 @@ function createToken(payload, expirationTime = "1h") {
 
 function validatePassword(password) {
   const minLength = 8;
-  const allowedSpecialChars = "[@$!%*?&]";
-
+  const allowedSpecialChars = "@$!%*?&"; 
+  
   const allowedCharsRegex = new RegExp(`^[A-Za-z0-9${allowedSpecialChars}]+$`);
 
   const checks = [
@@ -93,11 +93,8 @@ function validatePassword(password) {
       error: "A senha deve conter pelo menos um número.",
     },
     {
-      test: new RegExp(allowedSpecialChars).test(password),
-      error: `A senha deve conter pelo menos um caractere especial (${allowedSpecialChars.replace(
-        /[\[\]]/g,
-        ""
-      )}).`,
+      test: new RegExp(`[${allowedSpecialChars}]`).test(password),
+      error: `A senha deve conter pelo menos um caractere especial (${allowedSpecialChars}).`,
     },
     {
       test: allowedCharsRegex.test(password),

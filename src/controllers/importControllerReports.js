@@ -17,7 +17,7 @@ module.exports = class ImportControllerReports {
             const validRows = [];
             const invalidRows = [];
 
-            // Mapeamento de nomes amigáveis -> nomes do banco
+            // Mapeamento
             const headerMap = {
                 "Nome do Item": "name",
                 "Marca": "brand",

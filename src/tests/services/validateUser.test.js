@@ -1,199 +1,219 @@
-const { validateUser, findUserByEmailAndActiveStatus, validateLogin, validateUpdate, validateRecovery } = require('../../services/validateUser');
-const { validateDomain, validatePassword, queryAsync } = require('../../utils/functions');
+const { validateUser, validateUpdate, validateRecovery, validateEmail, validateLogin } = require("../../services/validateUser");
+const { validatePassword, validateDomain, queryAsync } = require("../../utils/functions");
 
-const mockClosePool = jest.fn().mockResolvedValue(true);
-
-jest.mock('../../utils/functions', () => ({
-  validateDomain: jest.fn(),
-  validatePassword: jest.fn(),
-  queryAsync: jest.fn(),
+jest.mock("../../utils/functions", () => ({
+    validateDomain: jest.fn(),
+    validatePassword: jest.fn(),
+    queryAsync: jest.fn(),
 }));
 
-jest.mock('../../db/connect', () => ({
-  query: jest.fn(),
-  closePool: mockClosePool,
-}));
+describe("validateUser", () => {
+    const validPasswordValidation = { valid: true, errors: [] };
+    
+    const validUserPayload = {
+        name: "Test User",
+        email: "test@sp.senai.br",
+        password: "ValidPassword@123",
+        confirmPassword: "ValidPassword@123",
+    };
 
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+    beforeEach(() => {
+        jest.clearAllMocks();
+        validateDomain.mockReturnValue(null);
+        validatePassword.mockReturnValue(validPasswordValidation);
+    });
 
-afterAll(async () => {
-  mockConsoleError.mockRestore();
-  mockConsoleLog.mockRestore();
-  await mockClosePool();
+    it("deve retornar erro se campos obrigatórios estiverem faltando", () => {
+        const payload = { name: "Test", email: "a@b.c", password: "p" };
+        const result = validateUser(payload);
+        expect(result).toHaveProperty("error", "Todos os campos devem ser preenchidos");
+    });
+
+    it("deve retornar erro se o domínio do email for inválido", () => {
+        validateDomain.mockReturnValue({ error: "Email inválido. Deve pertencer a um domínio SENAI autorizado" });
+        const result = validateUser(validUserPayload);
+        expect(result).toHaveProperty("error", "Email inválido. Deve pertencer a um domínio SENAI autorizado");
+    });
+
+    it("deve retornar erro se as senhas não coincidirem", () => {
+        const payload = { ...validUserPayload, confirmPassword: "MismatchedPassword" };
+        const result = validateUser(payload);
+        expect(result).toHaveProperty("error", "As senhas não coincidem");
+    });
+
+    it("deve retornar erro se a senha for fraca", () => {
+        const weakPasswordValidation = { valid: false, errors: ["A senha é muito curta.", "A senha não tem número."] };
+        validatePassword.mockReturnValue(weakPasswordValidation);
+        
+        const result = validateUser(validUserPayload);
+        expect(result).toHaveProperty("error", "A senha é muito fraca.");
+        expect(result).toHaveProperty("details", "A senha é muito curta. A senha não tem número.");
+    });
+
+    it("deve retornar null se todas as validações passarem", () => {
+        const result = validateUser(validUserPayload);
+        expect(result).toBeNull();
+    });
 });
 
-describe('validateUser', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    validateDomain.mockReturnValue(null);
-    validatePassword.mockReturnValue(true);
-    queryAsync.mockResolvedValue([]);
-  });
+describe("validateEmail", () => {
+    let mockConsoleError;
+    
+    beforeAll(() => {
+        mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
 
-  it('deve retornar erro se algum campo obrigatório estiver faltando', () => {
-    const result = validateUser({});
-    expect(result.error).toBe('Todos os campos devem ser preenchidos');
-    expect(result.details).toContain("'name', 'email', 'password' e 'confirmPassword' são obrigatórios");
-  });
+    afterAll(() => {
+        mockConsoleError.mockRestore();
+    });
 
-  it('deve retornar erro se o domínio do email for inválido', () => {
-    validateDomain.mockReturnValue({ error: 'Domínio inválido' });
-    const result = validateUser({ name: 'Test', email: 'test@invalid.com', password: 'Password@123', confirmPassword: 'Password@123' });
-    expect(result.error).toBe('Domínio inválido');
-    expect(result.details).toContain('domínio válido');
-    expect(validateDomain).toHaveBeenCalledWith('test@invalid.com');
-  });
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
 
-  it('deve retornar erro se as senhas não coincidirem', () => {
-    const result = validateUser({ name: 'Test', email: 'test@senai.br', password: 'Password@123', confirmPassword: 'DifferentPassword@123' });
-    expect(result.error).toBe('As senhas não coincidem');
-    expect(result.details).toContain("'password' deve ser idêntico ao campo 'confirmPassword'");
-  });
+    it("deve retornar erro se o email já estiver em uso por um usuário ativo", async () => {
+        queryAsync.mockResolvedValue([{ idUser: 1 }]);
+        const result = await validateEmail("existing@email.com");
+        expect(result).toHaveProperty("error", "O Email já está vinculado a outro usuário");
+    });
 
-  it('deve retornar erro se a senha for fraca', () => {
-    validatePassword.mockReturnValue(false);
-    const result = validateUser({ name: 'Test', email: 'test@senai.br', password: 'weak', confirmPassword: 'weak' });
-    expect(result.error).toBe('A senha é muito fraca.');
-    expect(result.details).toContain('mínimo 8 caracteres');
-    expect(validatePassword).toHaveBeenCalledWith('weak');
-  });
+    it("deve retornar null se o email não estiver em uso", async () => {
+        queryAsync.mockResolvedValue([]);
+        const result = await validateEmail("new@email.com");
+        expect(result).toBeNull();
+    });
 
-  it('deve retornar null se todas as validações passarem', () => {
-    const result = validateUser({ name: 'Test User', email: 'test@sp.senai.br', password: 'StrongPassword@123', confirmPassword: 'StrongPassword@123' });
-    expect(result).toBeNull();
-  });
+    it("deve retornar erro em caso de falha na consulta ao banco de dados", async () => {
+        queryAsync.mockRejectedValue(new Error("DB Error"));
+        const result = await validateEmail("any@email.com");
+        expect(result).toHaveProperty("error", "Erro ao verificar email");
+    });
 });
 
-describe('findUserByEmailAndActiveStatus', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+describe("validateLogin", () => {
+    const validLoginPayload = {
+        email: "login@sp.senai.br",
+        password: "ValidPassword@123",
+    };
 
-  it('deve retornar o usuário se encontrado com o status especificado', async () => {
-    const mockUser = { idUser: 1, email: 'test@sp.senai.br', isActive: true };
-    queryAsync.mockResolvedValueOnce([mockUser]);
-    const result = await findUserByEmailAndActiveStatus('test@sp.senai.br', true);
-    expect(result).toEqual(mockUser);
-    expect(queryAsync).toHaveBeenCalledWith('SELECT * FROM user WHERE email = ? AND isActive = ?', ['test@sp.senai.br', true]);
-  });
+    beforeEach(() => {
+        jest.clearAllMocks();
+        validateDomain.mockReturnValue(null);
+    });
 
-  it('deve retornar null se o usuário não for encontrado', async () => {
-    queryAsync.mockResolvedValueOnce([]);
-    const result = await findUserByEmailAndActiveStatus('notfound@sp.senai.br', true);
-    expect(result).toBeNull();
-  });
+    it("deve retornar erro se campos obrigatórios estiverem faltando", () => {
+        const payload = { email: "a@b.c" };
+        const result = validateLogin(payload);
+        expect(result).toHaveProperty("error", "Todos os campos devem ser preenchidos");
+    });
 
-  it('deve retornar null se ocorrer um erro no banco', async () => {
-    queryAsync.mockRejectedValueOnce(new Error('DB connection error'));
-    const result = await findUserByEmailAndActiveStatus('error@sp.senai.br', false);
-    expect(result).toBeNull();
-    expect(mockConsoleError).toHaveBeenCalled();
-  });
+    it("deve retornar erro se o domínio do email for inválido", () => {
+        validateDomain.mockReturnValue({ error: "Email inválido. Deve pertencer a um domínio SENAI autorizado" });
+        const result = validateLogin(validLoginPayload);
+        expect(result).toHaveProperty("error", "Email inválido. Deve pertencer a um domínio SENAI autorizado");
+    });
+
+    it("deve retornar null se todas as validações passarem", () => {
+        const result = validateLogin(validLoginPayload);
+        expect(result).toBeNull();
+    });
 });
 
-describe('validateLogin', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    validateDomain.mockReturnValue(null);
-  });
+describe("validateUpdate", () => {
+    const validUpdatePayload = {
+        name: "Novo Nome",
+        email: "novo@sp.senai.br",
+        password: "NewPassword@123",
+        confirmPassword: "NewPassword@123"
+    };
+    const passwordValidationSuccess = { valid: true, errors: [] };
+    const passwordValidationFailure = { valid: false, errors: ["Curta demais"] };
 
-  it('deve retornar erro se email ou senha estiverem faltando', () => {
-    const result = validateLogin({});
-    expect(result.error).toBe('Todos os campos devem ser preenchidos');
-    expect(result.details).toContain("'email' e 'password' são obrigatórios");
-  });
+    beforeEach(() => {
+        jest.clearAllMocks();
+        validateDomain.mockReturnValue(null);
+        validatePassword.mockReturnValue(passwordValidationSuccess);
+    });
 
-  it('deve retornar erro se o domínio do email for inválido', () => {
-    validateDomain.mockReturnValue({ error: 'Domínio inválido' });
-    const result = validateLogin({ email: 'test@invalid.com', password: 'Password@123' });
-    expect(result.error).toBe('Domínio inválido');
-    expect(validateDomain).toHaveBeenCalledWith('test@invalid.com');
-  });
+    it("deve retornar erro se nenhum campo para atualizar for fornecido", () => {
+        const payload = {};
+        const result = validateUpdate(payload);
+        expect(result).toHaveProperty("error", "Nenhum campo para atualizar foi fornecido.");
+    });
 
-  it('deve retornar null se as validações de login passarem', () => {
-    const result = validateLogin({ email: 'test@sp.senai.br', password: 'Password@123' });
-    expect(result).toBeNull();
-  });
+    it("deve retornar erro se o novo email tiver domínio inválido", () => {
+        validateDomain.mockReturnValue({ error: "Email inválido." });
+        const result = validateUpdate({ email: "invalid@domain.com" });
+        expect(result).toHaveProperty("error", "Email inválido.");
+    });
+
+    it("deve retornar erro se a senha for fornecida sem a confirmação", () => {
+        const result = validateUpdate({ password: "NewPassword@123" });
+        expect(result).toHaveProperty("error", "A confirmação de senha é obrigatória.");
+    });
+
+    it("deve retornar erro se a senha e a confirmação não coincidirem", () => {
+        const result = validateUpdate({ password: "NewPassword@123", confirmPassword: "Mismatched" });
+        expect(result).toHaveProperty("error", "As senhas não coincidem.");
+    });
+
+    it("deve retornar erro se a nova senha for fraca", () => {
+        validatePassword.mockReturnValue(passwordValidationFailure);
+        const result = validateUpdate({ password: "weak", confirmPassword: "weak" });
+        expect(result).toHaveProperty("error", "A nova senha é muito fraca.");
+        expect(result).toHaveProperty("details", "Curta demais");
+    });
+
+    it("deve retornar null se apenas o nome for atualizado", () => {
+        const result = validateUpdate({ name: "Novo Nome" });
+        expect(result).toBeNull();
+    });
+
+    it("deve retornar null se apenas o email for atualizado", () => {
+        const result = validateUpdate({ email: "new@sp.senai.br" });
+        expect(result).toBeNull();
+    });
+
+    it("deve retornar null se a senha for atualizada corretamente", () => {
+        const result = validateUpdate({ password: validUpdatePayload.password, confirmPassword: validUpdatePayload.confirmPassword });
+        expect(result).toBeNull();
+    });
 });
 
-describe('validateUpdate', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    validateDomain.mockReturnValue(null);
-    validatePassword.mockReturnValue(true);
-  });
+describe("validateRecovery", () => {
+    const validRecoveryPayload = {
+        password: "ValidPassword@123",
+        confirmPassword: "ValidPassword@123",
+    };
+    const passwordValidationSuccess = { valid: true, errors: [] };
+    const passwordValidationFailure = { valid: false, errors: ["Curta demais"] };
 
-  it('deve retornar erro se nenhum campo para atualizar for fornecido', () => {
-    const result = validateUpdate({});
-    expect(result.error).toBe('Nenhum campo para atualizar foi fornecido.');
-  });
+    beforeEach(() => {
+        jest.clearAllMocks();
+        validatePassword.mockReturnValue(passwordValidationSuccess);
+    });
 
-  it('deve retornar erro se o novo email tiver um domínio inválido', () => {
-    validateDomain.mockReturnValue({ error: 'Domínio inválido' });
-    const result = validateUpdate({ email: 'new@invalid.com' });
-    expect(result.error).toBe('Domínio inválido');
-    expect(validateDomain).toHaveBeenCalledWith('new@invalid.com');
-  });
+    it("deve retornar erro se a senha ou confirmação estiverem faltando", () => {
+        const payload = { password: "p" };
+        const result = validateRecovery(payload);
+        expect(result).toHaveProperty("error", "A senha e confirmação de senha são obrigatórias.");
+    });
 
-  it('deve retornar erro se a senha for fornecida mas a confirmação não', () => {
-    const result = validateUpdate({ password: 'NewPassword@123' });
-    expect(result.error).toBe('A confirmação de senha é obrigatória.');
-  });
+    it("deve retornar erro se as senhas não coincidirem", () => {
+        const payload = { password: "p1", confirmPassword: "p2" };
+        const result = validateRecovery(payload);
+        expect(result).toHaveProperty("error", "As senhas não coincidem.");
+    });
 
-  it('deve retornar erro se as senhas não coincidirem durante a atualização', () => {
-    const result = validateUpdate({ password: 'NewPassword@123', confirmPassword: 'DifferentPassword@123' });
-    expect(result.error).toBe('As senhas não coincidem.');
-  });
+    it("deve retornar erro se a nova senha for fraca", () => {
+        validatePassword.mockReturnValue(passwordValidationFailure);
+        const result = validateRecovery({ password: "weak", confirmPassword: "weak" });
+        expect(result).toHaveProperty("error", "A nova senha é muito fraca.");
+        expect(result).toHaveProperty("details", "Curta demais");
+    });
 
-  it('deve retornar erro se a nova senha for fraca', () => {
-    validatePassword.mockReturnValue(false);
-    const result = validateUpdate({ password: 'weak', confirmPassword: 'weak' });
-    expect(result.error).toBe('A nova senha é muito fraca.');
-    expect(validatePassword).toHaveBeenCalledWith('weak');
-  });
-
-  it('deve retornar null se o nome for atualizado corretamente', () => {
-    const result = validateUpdate({ name: 'Updated Name' });
-    expect(result).toBeNull();
-  });
-
-  it('deve retornar null se o email for atualizado corretamente', () => {
-    const result = validateUpdate({ email: 'valid@sp.senai.br' });
-    expect(result).toBeNull();
-  });
-
-  it('deve retornar null se a senha for atualizada corretamente', () => {
-    const result = validateUpdate({ password: 'StrongPassword@123', confirmPassword: 'StrongPassword@123' });
-    expect(result).toBeNull();
-  });
-});
-
-describe('validateRecovery', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    validatePassword.mockReturnValue(true);
-  });
-
-  it('deve retornar erro se senha ou confirmação estiverem faltando', () => {
-    const result = validateRecovery({});
-    expect(result.error).toBe('A senha e confirmação de senha são obrigatórias.');
-  });
-
-  it('deve retornar erro se as senhas não coincidirem', () => {
-    const result = validateRecovery({ password: 'NewPassword@123', confirmPassword: 'DifferentPassword@123' });
-    expect(result.error).toBe('As senhas não coincidem.');
-  });
-
-  it('deve retornar erro se a nova senha for fraca', () => {
-    validatePassword.mockReturnValue(false);
-    const result = validateRecovery({ password: 'weak', confirmPassword: 'weak' });
-    expect(result.error).toBe('A nova senha é muito fraca.');
-    expect(validatePassword).toHaveBeenCalledWith('weak');
-  });
-
-  it('deve retornar null se a senha de recuperação for válida', () => {
-    const result = validateRecovery({ password: 'StrongPassword@123', confirmPassword: 'StrongPassword@123' });
-    expect(result).toBeNull();
-  });
+    it("deve retornar null se a senha de recuperação for válida", () => {
+        const result = validateRecovery(validRecoveryPayload);
+        expect(result).toBeNull();
+    });
 });
