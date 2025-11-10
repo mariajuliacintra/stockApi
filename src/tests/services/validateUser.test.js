@@ -148,6 +148,13 @@ describe("validateUpdate", () => {
         const result = validateUpdate(payload);
         expect(result).toHaveProperty("error", "Nenhum campo para atualizar foi fornecido.");
     });
+    
+    it("deve retornar null e NÃO chamar validações de domínio/senha se apenas o nome for atualizado", () => {
+        const result = validateUpdate({ name: "Novo Nome" });
+        expect(result).toBeNull();
+        expect(validateDomain).not.toHaveBeenCalled();
+        expect(validatePassword).not.toHaveBeenCalled();
+    });
 
     it("deve retornar erro se o novo email tiver domínio inválido", () => {
         validateDomain.mockReturnValue({ error: "Email inválido." });
@@ -177,11 +184,6 @@ describe("validateUpdate", () => {
         const result = validateUpdate({ password: "weak", confirmPassword: "weak" });
         expect(result).toHaveProperty("error", "A nova senha é muito fraca e não atende aos requisitos de segurança.");
         expect(result.details).not.toContain("A senha é muito curta.");
-    });
-
-    it("deve retornar null se apenas o nome for atualizado", () => {
-        const result = validateUpdate({ name: "Novo Nome" });
-        expect(result).toBeNull();
     });
 
     it("deve retornar null se apenas o email for atualizado", () => {

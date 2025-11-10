@@ -73,7 +73,9 @@ function validatePassword(password) {
     const minLength = 8;
     const allowedSpecialChars = "@$!%*?."; 
     
-    const allowedCharsRegex = new RegExp(`^[A-Za-z0-9${allowedSpecialChars}]+$`);
+    const escapedSpecialChars = allowedSpecialChars.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    
+    const allowedCharsRegex = new RegExp(`^[A-Za-z0-9${escapedSpecialChars}]+$`);
 
     const checks = [
         {
@@ -93,7 +95,7 @@ function validatePassword(password) {
             error: "A senha deve conter pelo menos um número.",
         },
         {
-            test: new RegExp(`[${allowedSpecialChars}]`).test(password),
+            test: new RegExp(`[${escapedSpecialChars}]`).test(password),
             error: `A senha deve conter pelo menos um caractere especial (${allowedSpecialChars}).`,
         },
         {

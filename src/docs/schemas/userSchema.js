@@ -31,7 +31,7 @@ module.exports = {
             email: { type: 'string', format: 'email', description: 'E-mail para registro/reativação.' },
             password: { type: 'string', format: 'password', description: 'Senha (mínimo de 6 caracteres).' }
         },
-        example: { name: 'Novo Usuário', email: 'novo.usuario@exemplo.com', password: 'senhaForte123' }
+        example: { name: 'Novo Usuário', email: 'novo.usuario@exemplo.com', password: 'senhaForte123',  confirmPassword: 'senhaForte123'}
     },
 
     // Esquema para entrada de registro (gerente)

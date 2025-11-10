@@ -60,7 +60,7 @@ describe("validateDomain", () => {
 
 describe("validatePassword", () => {
     it("deve retornar { valid: true, errors: [] } para uma senha válida", () => {
-        const validPassword = "Senha@123";
+        const validPassword = "Senha@123."; 
         const result = validatePassword(validPassword);
         expect(result).toEqual({ valid: true, errors: [] });
     });
@@ -111,9 +111,17 @@ describe("validatePassword", () => {
         expect(result.errors).toContainEqual(expect.stringContaining("contém caracteres não permitidos"));
         expect(result.errors.length).toBe(1);
     });
+    
+    it("deve retornar { valid: false } e erros para uma senha com caractere especial não permitido (parêntese)", () => {
+        const invalidPassword = "Senha@123("; 
+        const result = validatePassword(invalidPassword);
+        expect(result.valid).toBe(false);
+        expect(result.errors).toContainEqual(expect.stringContaining("contém caracteres não permitidos"));
+        expect(result.errors.length).toBe(1);
+    });
 
     it("deve retornar { valid: false } e múltiplos erros para uma senha que falha em vários critérios", () => {
-        const invalidPassword = "1"; // Alterado para '1' (falha em: comprimento, minúscula, maiúscula, especial)
+        const invalidPassword = "1"; 
         const result = validatePassword(invalidPassword);
         
         expect(result.valid).toBe(false);
