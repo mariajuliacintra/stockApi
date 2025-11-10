@@ -45,7 +45,12 @@ const queryAsync = (query, values = []) => {
   });
 };
 
-const senaiDomains = ["@sp.senai.br", "@aluno.senai.br", "@gmail.com"];
+const senaiDomains = [
+  "@sp.senai.br",
+  "@aluno.senai.br",
+  "@gmail.com",
+  "@docente.senai.br",
+];
 
 const validateDomain = function (email) {
   if (!email.includes("@")) {
@@ -65,9 +70,52 @@ function createToken(payload, expirationTime = "1h") {
 }
 
 function validatePassword(password) {
-  const regex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  return regex.test(password);
+  const minLength = 8;
+  const allowedSpecialChars = "[@$!%*?&]";
+
+  const allowedCharsRegex = new RegExp(`^[A-Za-z0-9${allowedSpecialChars}]+$`);
+
+  const checks = [
+    {
+      test: password.length >= minLength,
+      error: `A senha deve ter no mínimo ${minLength} caracteres.`,
+    },
+    {
+      test: /[a-z]/.test(password),
+      error: "A senha deve conter pelo menos uma letra minúscula.",
+    },
+    {
+      test: /[A-Z]/.test(password),
+      error: "A senha deve conter pelo menos uma letra maiúscula.",
+    },
+    {
+      test: /\d/.test(password),
+      error: "A senha deve conter pelo menos um número.",
+    },
+    {
+      test: new RegExp(allowedSpecialChars).test(password),
+      error: `A senha deve conter pelo menos um caractere especial (${allowedSpecialChars.replace(
+        /[\[\]]/g,
+        ""
+      )}).`,
+    },
+    {
+      test: allowedCharsRegex.test(password),
+      error:
+        "A senha contém caracteres não permitidos (como emojis). Apenas letras, números e os caracteres especiais especificados são permitidos.",
+    },
+  ];
+
+  const failedChecks = checks.filter((check) => !check.test);
+
+  if (failedChecks.length > 0) {
+    return {
+      valid: false,
+      errors: failedChecks.map((check) => check.error),
+    };
+  }
+
+  return { valid: true, errors: [] };
 }
 
 function generateRandomCode() {

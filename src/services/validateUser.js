@@ -7,15 +7,17 @@ const validateUser = function ({ name, email, password, confirmPassword }) {
     }
     const domainError = validateDomain(email);
     if (domainError) {
-        return { error: domainError.error, details: "O email deve pertencer a um domínio válido. Domínios permitidos: yahoo.com, hotmail.com, outlook.com e gmail.com." };
+        return { error: domainError.error, details: "O email deve pertencer a um domínio válido. Domínios permitidos: docente.senai.br, sp.senai.br" };
     }
     if (password != confirmPassword) {
         return { error: "As senhas não coincidem", details: "O campo 'password' deve ser idêntico ao campo 'confirmPassword'." };
     }
-    if (!validatePassword(password)) {
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
         return {
             error: "A senha é muito fraca.",
-            details: "A senha deve ter no mínimo 8 caracteres, incluindo letras, números e um caractere especial.",
+            details: passwordValidation.errors.join(" "),
         };
     }
     return null;
@@ -109,10 +111,12 @@ const validateUpdate = function ({ name, email, password, confirmPassword }) {
         if (password !== confirmPassword) {
             return { error: "As senhas não coincidem.", details: "O campo 'password' deve ser idêntico ao campo 'confirmPassword'." };
         }
-        if (!validatePassword(password)) {
+        
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.valid) {
             return {
                 error: "A nova senha é muito fraca.",
-                details: "A nova senha deve ter no mínimo 8 caracteres, incluindo letras, números e um caractere especial.",
+                details: passwordValidation.errors.join(" "),
             };
         }
     }
@@ -127,10 +131,12 @@ const validateRecovery = function ({ password, confirmPassword }) {
     if (password !== confirmPassword) {
         return { error: "As senhas não coincidem.", details: "O campo 'password' deve ser idêntico ao campo 'confirmPassword'." };
     }
-    if (!validatePassword(password)) {
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
         return {
             error: "A nova senha é muito fraca.",
-            details: "A nova senha deve ter no mínimo 8 caracteres, incluindo letras, números e um caractere especial.",
+            details: passwordValidation.errors.join(" "),
         };
     }
     return null;
