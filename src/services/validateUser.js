@@ -87,7 +87,7 @@ const validateLogin = function ({ email, password }) {
     }
     const domainError = validateDomain(email);
     if (domainError) {
-        return { error: domainError.error, details: "O email deve pertencer a um domínio válido. Domínios permitidos: yahoo.com, hotmail.com, outlook.com e gmail.com." };
+        return { error: domainError.error, details: "O email deve pertencer a um domínio válido. Domínios permitidos: docente.senai.br, sp.senai.br" };
     }
     return null;
 };
@@ -100,7 +100,7 @@ const validateUpdate = function ({ name, email, password, confirmPassword }) {
     if (email) {
         const domainError = validateDomain(email);
         if (domainError) {
-            return { error: domainError.error, details: "O novo e-mail deve pertencer a um domínio válido. Domínios permitidos: yahoo.com, hotmail.com, outlook.com e gmail.com." };
+            return { error: domainError.error, details: "O novo e-mail deve pertencer a um domínio válido. Domínios permitidos: docente.senai.br, sp.senai.br" };
         }
     }
 
