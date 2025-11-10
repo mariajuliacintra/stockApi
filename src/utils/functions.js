@@ -70,49 +70,49 @@ function createToken(payload, expirationTime = "1h") {
 }
 
 function validatePassword(password) {
-  const minLength = 8;
-  const allowedSpecialChars = "@$!%*?&"; 
-  
-  const allowedCharsRegex = new RegExp(`^[A-Za-z0-9${allowedSpecialChars}]+$`);
+    const minLength = 8;
+    const allowedSpecialChars = "@$!%*?."; 
+    
+    const allowedCharsRegex = new RegExp(`^[A-Za-z0-9${allowedSpecialChars}]+$`);
 
-  const checks = [
-    {
-      test: password.length >= minLength,
-      error: `A senha deve ter no mínimo ${minLength} caracteres.`,
-    },
-    {
-      test: /[a-z]/.test(password),
-      error: "A senha deve conter pelo menos uma letra minúscula.",
-    },
-    {
-      test: /[A-Z]/.test(password),
-      error: "A senha deve conter pelo menos uma letra maiúscula.",
-    },
-    {
-      test: /\d/.test(password),
-      error: "A senha deve conter pelo menos um número.",
-    },
-    {
-      test: new RegExp(`[${allowedSpecialChars}]`).test(password),
-      error: `A senha deve conter pelo menos um caractere especial (${allowedSpecialChars}).`,
-    },
-    {
-      test: allowedCharsRegex.test(password),
-      error:
-        "A senha contém caracteres não permitidos (como emojis). Apenas letras, números e os caracteres especiais especificados são permitidos.",
-    },
-  ];
+    const checks = [
+        {
+            test: password.length >= minLength,
+            error: `A senha deve ter no mínimo ${minLength} caracteres.`,
+        },
+        {
+            test: /[a-z]/.test(password),
+            error: "A senha deve conter pelo menos uma letra minúscula.",
+        },
+        {
+            test: /[A-Z]/.test(password),
+            error: "A senha deve conter pelo menos uma letra maiúscula.",
+        },
+        {
+            test: /\d/.test(password),
+            error: "A senha deve conter pelo menos um número.",
+        },
+        {
+            test: new RegExp(`[${allowedSpecialChars}]`).test(password),
+            error: `A senha deve conter pelo menos um caractere especial (${allowedSpecialChars}).`,
+        },
+        {
+            test: allowedCharsRegex.test(password),
+            error:
+                "A senha contém caracteres não permitidos (como emojis). Apenas letras, números e os caracteres especiais especificados são permitidos.",
+        },
+    ];
 
-  const failedChecks = checks.filter((check) => !check.test);
+    const failedChecks = checks.filter((check) => !check.test);
 
-  if (failedChecks.length > 0) {
-    return {
-      valid: false,
-      errors: failedChecks.map((check) => check.error),
-    };
-  }
+    if (failedChecks.length > 0) {
+        return {
+            valid: false,
+            errors: failedChecks.map((check) => check.error),
+        };
+    }
 
-  return { valid: true, errors: [] };
+    return { valid: true, errors: [] };
 }
 
 function generateRandomCode() {

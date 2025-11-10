@@ -9,6 +9,8 @@ jest.mock("../../utils/functions", () => ({
 
 describe("validateUser", () => {
     const validPasswordValidation = { valid: true, errors: [] };
+    const passwordValidationOneFailure = { valid: false, errors: ["A senha deve conter pelo menos uma letra maiúscula."] };
+    const passwordValidationMultipleFailures = { valid: false, errors: ["A senha é muito curta.", "A senha não tem número."] };
     
     const validUserPayload = {
         name: "Test User",
@@ -41,13 +43,18 @@ describe("validateUser", () => {
         expect(result).toHaveProperty("error", "As senhas não coincidem");
     });
 
-    it("deve retornar erro se a senha for fraca", () => {
-        const weakPasswordValidation = { valid: false, errors: ["A senha é muito curta.", "A senha não tem número."] };
-        validatePassword.mockReturnValue(weakPasswordValidation);
-        
+    it("deve retornar erro específico se a senha falhar em APENAS um critério", () => {
+        validatePassword.mockReturnValue(passwordValidationOneFailure);
         const result = validateUser(validUserPayload);
-        expect(result).toHaveProperty("error", "A senha é muito fraca.");
-        expect(result).toHaveProperty("details", "A senha é muito curta. A senha não tem número.");
+        expect(result).toHaveProperty("error", "A senha não atende a um critério de segurança.");
+        expect(result).toHaveProperty("details", "A senha deve conter pelo menos uma letra maiúscula.");
+    });
+
+    it("deve retornar erro geral se a senha falhar em DOIS ou mais critérios", () => {
+        validatePassword.mockReturnValue(passwordValidationMultipleFailures);
+        const result = validateUser(validUserPayload);
+        expect(result).toHaveProperty("error", "A senha é muito fraca e não atende aos requisitos de segurança.");
+        expect(result.details).not.toContain("A senha é muito curta.");
     });
 
     it("deve retornar null se todas as validações passarem", () => {
@@ -127,7 +134,8 @@ describe("validateUpdate", () => {
         confirmPassword: "NewPassword@123"
     };
     const passwordValidationSuccess = { valid: true, errors: [] };
-    const passwordValidationFailure = { valid: false, errors: ["Curta demais"] };
+    const passwordValidationOneFailure = { valid: false, errors: ["A senha deve conter pelo menos uma letra maiúscula."] };
+    const passwordValidationMultipleFailures = { valid: false, errors: ["A senha é muito curta.", "A senha não tem número."] };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -157,11 +165,18 @@ describe("validateUpdate", () => {
         expect(result).toHaveProperty("error", "As senhas não coincidem.");
     });
 
-    it("deve retornar erro se a nova senha for fraca", () => {
-        validatePassword.mockReturnValue(passwordValidationFailure);
+    it("deve retornar erro específico se a nova senha falhar em APENAS um critério", () => {
+        validatePassword.mockReturnValue(passwordValidationOneFailure);
         const result = validateUpdate({ password: "weak", confirmPassword: "weak" });
-        expect(result).toHaveProperty("error", "A nova senha é muito fraca.");
-        expect(result).toHaveProperty("details", "Curta demais");
+        expect(result).toHaveProperty("error", "A nova senha não atende a um critério de segurança.");
+        expect(result).toHaveProperty("details", "A senha deve conter pelo menos uma letra maiúscula.");
+    });
+
+    it("deve retornar erro geral se a nova senha falhar em DOIS ou mais critérios", () => {
+        validatePassword.mockReturnValue(passwordValidationMultipleFailures);
+        const result = validateUpdate({ password: "weak", confirmPassword: "weak" });
+        expect(result).toHaveProperty("error", "A nova senha é muito fraca e não atende aos requisitos de segurança.");
+        expect(result.details).not.toContain("A senha é muito curta.");
     });
 
     it("deve retornar null se apenas o nome for atualizado", () => {
@@ -186,7 +201,8 @@ describe("validateRecovery", () => {
         confirmPassword: "ValidPassword@123",
     };
     const passwordValidationSuccess = { valid: true, errors: [] };
-    const passwordValidationFailure = { valid: false, errors: ["Curta demais"] };
+    const passwordValidationOneFailure = { valid: false, errors: ["A senha deve conter pelo menos uma letra maiúscula."] };
+    const passwordValidationMultipleFailures = { valid: false, errors: ["A senha é muito curta.", "A senha não tem número."] };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -205,11 +221,18 @@ describe("validateRecovery", () => {
         expect(result).toHaveProperty("error", "As senhas não coincidem.");
     });
 
-    it("deve retornar erro se a nova senha for fraca", () => {
-        validatePassword.mockReturnValue(passwordValidationFailure);
+    it("deve retornar erro específico se a nova senha falhar em APENAS um critério", () => {
+        validatePassword.mockReturnValue(passwordValidationOneFailure);
         const result = validateRecovery({ password: "weak", confirmPassword: "weak" });
-        expect(result).toHaveProperty("error", "A nova senha é muito fraca.");
-        expect(result).toHaveProperty("details", "Curta demais");
+        expect(result).toHaveProperty("error", "A nova senha não atende a um critério de segurança.");
+        expect(result).toHaveProperty("details", "A senha deve conter pelo menos uma letra maiúscula.");
+    });
+
+    it("deve retornar erro geral se a nova senha falhar em DOIS ou mais critérios", () => {
+        validatePassword.mockReturnValue(passwordValidationMultipleFailures);
+        const result = validateRecovery({ password: "weak", confirmPassword: "weak" });
+        expect(result).toHaveProperty("error", "A nova senha é muito fraca e não atende aos requisitos de segurança.");
+        expect(result.details).not.toContain("A senha é muito curta.");
     });
 
     it("deve retornar null se a senha de recuperação for válida", () => {

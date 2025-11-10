@@ -15,10 +15,17 @@ const validateUser = function ({ name, email, password, confirmPassword }) {
     
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-        return {
-            error: "A senha é muito fraca.",
-            details: passwordValidation.errors.join(" "),
-        };
+        if (passwordValidation.errors.length === 1) {
+            return {
+                error: "A senha não atende a um critério de segurança.",
+                details: passwordValidation.errors[0],
+            };
+        } else {
+            return {
+                error: "A senha é muito fraca e não atende aos requisitos de segurança.",
+                details: "A senha deve ter no mínimo 8 caracteres, conter letras maiúsculas, minúsculas, números e caracteres especiais.",
+            };
+        }
     }
     return null;
 };
@@ -114,10 +121,17 @@ const validateUpdate = function ({ name, email, password, confirmPassword }) {
         
         const passwordValidation = validatePassword(password);
         if (!passwordValidation.valid) {
-            return {
-                error: "A nova senha é muito fraca.",
-                details: passwordValidation.errors.join(" "),
-            };
+            if (passwordValidation.errors.length === 1) {
+                return {
+                    error: "A nova senha não atende a um critério de segurança.",
+                    details: passwordValidation.errors[0],
+                };
+            } else {
+                return {
+                    error: "A nova senha é muito fraca e não atende aos requisitos de segurança.",
+                    details: "A senha deve ter no mínimo 8 caracteres, conter letras maiúsculas, minúsculas, números e caracteres especiais.",
+                };
+            }
         }
     }
 
@@ -134,10 +148,17 @@ const validateRecovery = function ({ password, confirmPassword }) {
     
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-        return {
-            error: "A nova senha é muito fraca.",
-            details: passwordValidation.errors.join(" "),
-        };
+        if (passwordValidation.errors.length === 1) {
+            return {
+                error: "A nova senha não atende a um critério de segurança.",
+                details: passwordValidation.errors[0],
+            };
+        } else {
+            return {
+                error: "A nova senha é muito fraca e não atende aos requisitos de segurança.",
+                details: "A senha deve ter no mínimo 8 caracteres, conter letras maiúsculas, minúsculas, números e caracteres especiais.",
+            };
+        }
     }
     return null;
 }
@@ -150,5 +171,5 @@ module.exports = {
     validateRecovery,
     findUserByEmailAndActiveStatus,
     findUserByEmailAllStates,
-    validateEmailAllStates
+    validateEmailAllStates,
 };
