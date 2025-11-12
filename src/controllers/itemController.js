@@ -2,6 +2,7 @@ const { queryAsync, handleResponse } = require("../utils/functions");
 const { aliasGenerator } = require("../utils/aliasGenerator");
 const validateItem = require("../services/validateItem");
 const fs = require("fs").promises;
+const sharp = require('sharp');
 
 module.exports = class ItemController {
   static async checkItemBySapCode(req, res) {
@@ -757,92 +758,103 @@ module.exports = class ItemController {
       });
     }
   }
-
-  static async insertImage(req, res) {
+static async insertImage(req, res) {
     const { idItem } = req.params;
     const imageFile = req.file;
 
     if (!imageFile) {
-      return handleResponse(res, 400, {
-        success: false,
-        error: "Nenhuma imagem foi enviada.",
-      });
+        return handleResponse(res, 400, {
+            success: false,
+            error: "Nenhuma imagem foi enviada.",
+        });
     }
 
     try {
-      const [item] = await queryAsync(
-        "SELECT fkIdImage FROM item WHERE idItem = ?",
-        [idItem]
-      );
+        const [item] = await queryAsync(
+            "SELECT fkIdImage FROM item WHERE idItem = ?",
+            [idItem]
+        );
 
-      if (!item) {
+        if (!item) {
+            await fs
+                .unlink(imageFile.path)
+                .catch((err) =>
+                    console.error("Erro ao remover arquivo temporário:", err)
+                );
+            return handleResponse(res, 404, {
+                success: false,
+                error: "Item não encontrado.",
+            });
+        }
+
+        const processedImageBuffer = await sharp(imageFile.path)
+            .resize(1000, 1000, { 
+                fit: 'inside',
+                withoutEnlargement: true 
+            })
+            .jpeg({ quality: 85 }) 
+            .toBuffer();
+        
+        const imageData = processedImageBuffer;
+        const imageType = 'image/jpeg';
+
+        let message;
+        let statusCode;
+        let fkIdImage;
+
+        if (item.fkIdImage) {
+            await queryAsync(
+                "UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?",
+                [imageData, imageType, item.fkIdImage]
+            );
+            fkIdImage = item.fkIdImage;
+            message = "Imagem do item atualizada com sucesso!";
+            statusCode = 200;
+        } else {
+            // Usa o imageData e imageType CONVERTIDOS
+            const imageResult = await queryAsync(
+                "INSERT INTO image (imageData, imageType) VALUES (?, ?)",
+                [imageData, imageType]
+            );
+            fkIdImage = imageResult.insertId;
+            await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [
+                fkIdImage,
+                idItem,
+            ]);
+            message = "Imagem adicionada com sucesso ao item!";
+            statusCode = 201;
+        }
+
+        // Remove o arquivo temporário original
         await fs
-          .unlink(imageFile.path)
-          .catch((err) =>
-            console.error("Erro ao remover arquivo temporário:", err)
-          );
-        return handleResponse(res, 404, {
-          success: false,
-          error: "Item não encontrado.",
+            .unlink(imageFile.path)
+            .catch((err) =>
+                console.error("Erro ao remover arquivo temporário:", err)
+            );
+        
+        return handleResponse(res, statusCode, {
+            success: true,
+            message,
+            data: { fkIdImage },
+            arrayName: "data",
         });
-      }
-
-      const imageData = await fs.readFile(imageFile.path);
-      const imageType = imageFile.mimetype;
-
-      let message;
-      let statusCode;
-      let fkIdImage;
-
-      if (item.fkIdImage) {
-        await queryAsync(
-          "UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?",
-          [imageData, imageType, item.fkIdImage]
-        );
-        fkIdImage = item.fkIdImage;
-        message = "Imagem do item atualizada com sucesso!";
-        statusCode = 200;
-      } else {
-        const imageResult = await queryAsync(
-          "INSERT INTO image (imageData, imageType) VALUES (?, ?)",
-          [imageData, imageType]
-        );
-        fkIdImage = imageResult.insertId;
-        await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [
-          fkIdImage,
-          idItem,
-        ]);
-        message = "Imagem adicionada com sucesso ao item!";
-        statusCode = 201;
-      }
-
-      await fs
-        .unlink(imageFile.path)
-        .catch((err) =>
-          console.error("Erro ao remover arquivo temporário:", err)
-        );
-      return handleResponse(res, statusCode, {
-        success: true,
-        message,
-        data: { fkIdImage },
-        arrayName: "data",
-      });
     } catch (error) {
-      console.error("Erro ao inserir/atualizar imagem do item:", error);
-      if (imageFile) {
-        await fs
-          .unlink(imageFile.path)
-          .catch((err) =>
-            console.error("Erro ao remover arquivo temporário:", err)
-          );
-      }
-      return handleResponse(res, 500, {
-        success: false,
-        error: "Erro interno do servidor",
-        details: error.message,
-      });
+        console.error("Erro ao inserir/atualizar imagem do item:", error);
+        if (imageFile) {
+            // Garante que o arquivo temporário é removido em caso de erro
+            await fs
+                .unlink(imageFile.path)
+                .catch((err) =>
+                    console.error("Erro ao remover arquivo temporário:", err)
+                );
+        }
+        return handleResponse(res, 500, {
+            success: false,
+            error: "Erro interno do servidor",
+            details: error.message,
+        });
     }
-  }
+}
 
   static async deleteImage(req, res) {
     const { idItem } = req.params;
