@@ -27,6 +27,8 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.9",
     "pdfkit": "^0.17.1",
+    "sharp": "^0.34.5",
+    "sharps": "^3.0.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "z-schema": "^6.0.2"
