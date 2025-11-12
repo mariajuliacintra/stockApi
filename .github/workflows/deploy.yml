@@ -2,15 +2,14 @@ name: CI/CD Docker na VM com Chave SSH
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
+    tags:
+      - "deploy-*"
 
 jobs:
-  build-test:
+  test:
+    name: Executar Testes Unitários
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
@@ -18,8 +17,8 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.14.0'
-          
+          node-version: "22.14.0"
+
       - name: Cache de Dependências Node.js
         uses: actions/cache@v4
         with:
@@ -27,32 +26,42 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-          
+
       - name: Instalar Dependências (Com Cache)
         run: npm install
-        
+
       - name: Executar Testes Unitários com npm test
         run: npm test
-        
+
+  build-and-deploy:
+    name: Build da Imagem e Deploy na VM
+    runs-on: ubuntu-latest
+    environment: deploy
+    needs: test
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Extrair Tag de Versão
+        id: tag_version
+        run: echo "VERSION_TAG=${GITHUB_REF_NAME#deploy-}" >> $GITHUB_OUTPUT
+
       - name: Login no Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERUSERNAME }}
           password: ${{ secrets.DOCKERPASSWORD }}
 
-      - name: Build e Push da Imagem Docker (com tag latest)
+      - name: Build e Push da Imagem Docker (com tag de Versão e latest)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERUSERNAME }}/stockapi:latest 
+          tags: |
+            ${{ secrets.DOCKERUSERNAME }}/stockapi:${{ steps.tag_version.outputs.VERSION_TAG }}
+            ${{ secrets.DOCKERUSERNAME }}/stockapi:latest
 
-  deploy:
-    runs-on: ubuntu-latest
-    environment: deploy
-    needs: build-test
-
-    steps:
       - name: Deploy na VM via SSH (com Chave SSH)
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -61,16 +70,18 @@ jobs:
           key: ${{ secrets.SSHPRIVATEKEY }}
           script: |
             echo "Conectado na VM e atualizando..."
-            LATEST_TAG="${{ secrets.DOCKERUSERNAME }}/stockapi:latest"
-            
+            VERSION_TAG="${{ steps.tag_version.outputs.VERSION_TAG }}"
+
+            TARGET_TAG="${{ secrets.DOCKERUSERNAME }}/stockapi:$VERSION_TAG"
+
             cd stockapi 
 
-            sed -i "s|image: ${{ secrets.DOCKERUSERNAME }}/stockapi:.*|image: $LATEST_TAG|g" docker-compose.yml
-            
+            sed -i "s|image: ${{ secrets.DOCKERUSERNAME }}/stockapi:.*|image: $TARGET_TAG|g" docker-compose.yml
+
             docker-compose down
             docker-compose pull app 
             docker-compose up -d 
-            
-            echo "Deploy concluído com sucesso com a tag latest"
-            
+
+            echo "Deploy concluído com sucesso com a tag $VERSION_TAG"
+
             docker image prune -f
