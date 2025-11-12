@@ -15,12 +15,9 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Adicionado 'heic' e 'heif' à lista de tipos permitidos
   const filetypes = /jpeg|jpg|png|gif|heic|heif/;
 
-  // Testa o MIME type (Ex: image/heic)
   const mimetypeTest = filetypes.test(file.mimetype.toLowerCase());
-  // Testa a extensão (Ex: .heic)
   const extnameTest = filetypes.test(
     path.extname(file.originalname).toLowerCase()
   );
