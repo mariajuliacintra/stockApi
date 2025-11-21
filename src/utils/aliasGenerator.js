@@ -30,7 +30,7 @@ async function aliasGenerator(itemName) {
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-lite',
+            model: 'gemini-2.5-flash-lite',
             contents: prompt,
             config: config,
         });
