@@ -15,26 +15,43 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const filetypes = /jpeg|jpg|png|gif|heic|heif/;
+  // 🎯 MUDANÇA 1: Adicionar 'jfif' na lista de extensões permitidas
+  const filetypes = /jpeg|jpg|png|gif|heic|heif|jfif/;
 
-  const mimetypeTest = filetypes.test(file.mimetype.toLowerCase());
+  // 🎯 MUDANÇA 2: Adicionar explicitamente os MIME types comuns para JFIF/JPEG
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/heic",
+    "image/heif",
+    "image/jfif", // O principal que faltava
+    "image/pjpeg", // Garantindo suporte a variações
+  ];
+
+  // Testa a extensão do arquivo
   const extnameTest = filetypes.test(
     path.extname(file.originalname).toLowerCase()
   );
 
+  // Testa o MIME type
+  const mimetypeTest = allowedMimeTypes.includes(file.mimetype.toLowerCase());
+
   if (mimetypeTest && extnameTest) {
     return cb(null, true);
   }
+  // Retorna o erro com a lista atualizada
   cb(
     new Error(
-      "Error: Apenas arquivos de imagem são permitidos (jpeg, jpg, png, gif, heic)!"
+      "Error: Apenas arquivos de imagem são permitidos (jpeg, jpg, png, gif, heic, heif, jfif)!"
     )
   );
 };
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 1024 * 1024 * 5 },
+  limits: { fileSize: 1024 * 1024 * 5 }, // 5 MB
   fileFilter: fileFilter,
 });
 

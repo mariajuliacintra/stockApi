@@ -2,7 +2,7 @@ const { queryAsync, handleResponse } = require("../utils/functions");
 const { aliasGenerator } = require("../utils/aliasGenerator");
 const validateItem = require("../services/validateItem");
 const fs = require("fs").promises;
-const sharp = require('sharp');
+const sharp = require("sharp");
 
 module.exports = class ItemController {
   static async checkItemBySapCode(req, res) {
@@ -146,11 +146,11 @@ module.exports = class ItemController {
 
   static async getAllItems(req, res) {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 25;
-        const offset = (page - 1) * limit;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 25;
+      const offset = (page - 1) * limit;
 
-        const query = `
+      const query = `
             SELECT
                 i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock, i.sapCode,
                 c.idCategory AS categoryId, c.categoryValue,
@@ -173,64 +173,64 @@ module.exports = class ItemController {
             ORDER BY i.name
             LIMIT ? OFFSET ?
         `;
-        const items = await queryAsync(query, [limit, offset]);
+      const items = await queryAsync(query, [limit, offset]);
 
-        const countQuery = `
+      const countQuery = `
             SELECT COUNT(*) as totalCount FROM item
         `;
-        const [{ totalCount }] = await queryAsync(countQuery);
-        const totalPages = Math.ceil(totalCount / limit);
+      const [{ totalCount }] = await queryAsync(countQuery);
+      const totalPages = Math.ceil(totalCount / limit);
 
-        const formattedItems = items.map((item) => ({
-            idItem: item.idItem,
-            name: item.name,
-            aliases: item.aliases,
-            brand: item.brand,
-            description: item.description,
-            minimumStock: item.minimumStock,
-            sapCode: item.sapCode,
-            category: {
-                idCategory: item.categoryId,
-                value: item.categoryValue,
-            },
-            totalQuantity: item.totalQuantity || 0,
-            technicalSpecs:
-                item.technicalSpecs &&
-                item.technicalSpecs.length > 0 &&
-                item.technicalSpecs[0].idTechnicalSpec
-                    ? item.technicalSpecs
-                    : [],
-        }));
+      const formattedItems = items.map((item) => ({
+        idItem: item.idItem,
+        name: item.name,
+        aliases: item.aliases,
+        brand: item.brand,
+        description: item.description,
+        minimumStock: item.minimumStock,
+        sapCode: item.sapCode,
+        category: {
+          idCategory: item.categoryId,
+          value: item.categoryValue,
+        },
+        totalQuantity: item.totalQuantity || 0,
+        technicalSpecs:
+          item.technicalSpecs &&
+          item.technicalSpecs.length > 0 &&
+          item.technicalSpecs[0].idTechnicalSpec
+            ? item.technicalSpecs
+            : [],
+      }));
 
-        return handleResponse(res, 200, {
-            success: true,
-            message: "Lista de itens obtida com sucesso.",
-            data: formattedItems,
-            arrayName: "items",
-            pagination: {
-                totalItems: totalCount,
-                totalPages: totalPages,
-                currentPage: page,
-                itemsPerPage: limit,
-            },
-        });
+      return handleResponse(res, 200, {
+        success: true,
+        message: "Lista de itens obtida com sucesso.",
+        data: formattedItems,
+        arrayName: "items",
+        pagination: {
+          totalItems: totalCount,
+          totalPages: totalPages,
+          currentPage: page,
+          itemsPerPage: limit,
+        },
+      });
     } catch (error) {
-        console.error("Erro ao buscar e agrupar itens:", error);
-        return handleResponse(res, 500, {
-            success: false,
-            error: "Erro interno do servidor",
-            details: error.message,
-        });
+      console.error("Erro ao buscar e agrupar itens:", error);
+      return handleResponse(res, 500, {
+        success: false,
+        error: "Erro interno do servidor",
+        details: error.message,
+      });
     }
-}
+  }
   static async filterItems(req, res) {
     try {
-        const { name, idCategory } = req.body;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 25;
-        const offset = (page - 1) * limit;
+      const { name, idCategory } = req.body;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 25;
+      const offset = (page - 1) * limit;
 
-        let query = `
+      let query = `
             SELECT
                 i.idItem, i.name, i.aliases, i.brand, i.description, i.minimumStock, i.sapCode,
                 c.idCategory AS categoryId, c.categoryValue,
@@ -251,82 +251,82 @@ module.exports = class ItemController {
             LEFT JOIN technicalSpec ts ON its.fkIdTechnicalSpec = ts.idTechnicalSpec
             WHERE 1=1
         `;
-        let countQuery = `
+      let countQuery = `
             SELECT COUNT(DISTINCT i.idItem) as totalCount
             FROM item i
             WHERE 1=1
         `;
-        const queryParams = [];
-        const countQueryParams = [];
+      const queryParams = [];
+      const countQueryParams = [];
 
-        if (name) {
-            const normalizedName = `%${name
-                .trim()
-                .toLowerCase()
-                .replace(/\s/g, "")}%`;
-            query += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
-            countQuery += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
-            queryParams.push(normalizedName, normalizedName);
-            countQueryParams.push(normalizedName, normalizedName);
-        }
+      if (name) {
+        const normalizedName = `%${name
+          .trim()
+          .toLowerCase()
+          .replace(/\s/g, "")}%`;
+        query += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
+        countQuery += ` AND (REPLACE(LOWER(i.name), ' ', '') LIKE ? OR REPLACE(LOWER(i.aliases), ' ', '') LIKE ?)`;
+        queryParams.push(normalizedName, normalizedName);
+        countQueryParams.push(normalizedName, normalizedName);
+      }
 
-        if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
-            const placeholders = idCategory.map(() => "?").join(",");
-            query += ` AND i.fkIdCategory IN (${placeholders})`;
-            countQuery += ` AND i.fkIdCategory IN (${placeholders})`;
-            queryParams.push(...idCategory);
-            countQueryParams.push(...idCategory);
-        }
+      if (idCategory && Array.isArray(idCategory) && idCategory.length > 0) {
+        const placeholders = idCategory.map(() => "?").join(",");
+        query += ` AND i.fkIdCategory IN (${placeholders})`;
+        countQuery += ` AND i.fkIdCategory IN (${placeholders})`;
+        queryParams.push(...idCategory);
+        countQueryParams.push(...idCategory);
+      }
 
-        query += ` GROUP BY i.idItem, l.totalQuantity ORDER BY i.name LIMIT ? OFFSET ?`;
-        queryParams.push(limit, offset);
+      query += ` GROUP BY i.idItem, l.totalQuantity ORDER BY i.name LIMIT ? OFFSET ?`;
+      queryParams.push(limit, offset);
 
-        const items = await queryAsync(query, queryParams);
-        const [{ totalCount }] = await queryAsync(countQuery, countQueryParams);
-        const totalPages = Math.ceil(totalCount / limit);
+      const items = await queryAsync(query, queryParams);
+      const [{ totalCount }] = await queryAsync(countQuery, countQueryParams);
+      const totalPages = Math.ceil(totalCount / limit);
 
-        const formattedItems = items.map((item) => ({
-            idItem: item.idItem,
-            name: item.name,
-            aliases: item.aliases,
-            brand: item.brand,
-            description: item.description,
-            minimumStock: item.minimumStock,
-            sapCode: item.sapCode,
-            category: {
-                idCategory: item.categoryId,
-                value: item.categoryValue,
-            },
-            totalQuantity: item.totalQuantity || 0,
-            technicalSpecs:
-                item.technicalSpecs &&
-                item.technicalSpecs.length > 0 &&
-                item.technicalSpecs[0].idTechnicalSpec
-                    ? item.technicalSpecs
-                    : [],
-        }));
+      const formattedItems = items.map((item) => ({
+        idItem: item.idItem,
+        name: item.name,
+        aliases: item.aliases,
+        brand: item.brand,
+        description: item.description,
+        minimumStock: item.minimumStock,
+        sapCode: item.sapCode,
+        category: {
+          idCategory: item.categoryId,
+          value: item.categoryValue,
+        },
+        totalQuantity: item.totalQuantity || 0,
+        technicalSpecs:
+          item.technicalSpecs &&
+          item.technicalSpecs.length > 0 &&
+          item.technicalSpecs[0].idTechnicalSpec
+            ? item.technicalSpecs
+            : [],
+      }));
 
-        return handleResponse(res, 200, {
-            success: true,
-            message: "Itens filtrados com sucesso.",
-            data: formattedItems,
-            arrayName: "items",
-            pagination: {
-                totalItems: totalCount,
-                totalPages: totalPages,
-                currentPage: page,
-                itemsPerPage: limit,
-            },
-        });
+      return handleResponse(res, 200, {
+        success: true,
+        message: "Itens filtrados com sucesso.",
+        data: formattedItems,
+        arrayName: "items",
+        pagination: {
+          totalItems: totalCount,
+          totalPages: totalPages,
+          currentPage: page,
+          itemsPerPage: limit,
+        },
+      });
     } catch (error) {
-        console.error("Erro ao filtrar itens:", error);
-        return handleResponse(res, 500, {
-            success: false,
-            error: "Erro interno do servidor",
-            details: error.message,
-        });
+      console.error("Erro ao filtrar itens:", error);
+      return handleResponse(res, 500, {
+        success: false,
+        error: "Erro interno do servidor",
+        details: error.message,
+      });
     }
-}
+  }
 
   static async createItem(req, res) {
     const {
@@ -758,103 +758,134 @@ module.exports = class ItemController {
       });
     }
   }
-static async insertImage(req, res) {
+  static async insertImage(req, res) {
     const { idItem } = req.params;
     const imageFile = req.file;
 
     if (!imageFile) {
-        return handleResponse(res, 400, {
-            success: false,
-            error: "Nenhuma imagem foi enviada.",
-        });
+      return handleResponse(res, 400, {
+        success: false,
+        error: "Nenhuma imagem foi enviada.",
+      });
     }
+
+    // O MIME type enviado pelo navegador, que pode ser 'image/jfif' ou 'image/jpeg'
+    const originalMimeType = imageFile.mimetype;
 
     try {
-        const [item] = await queryAsync(
-            "SELECT fkIdImage FROM item WHERE idItem = ?",
-            [idItem]
+      const [item] = await queryAsync(
+        "SELECT fkIdImage FROM item WHERE idItem = ?",
+        [idItem]
+      );
+
+      if (!item) {
+        // Remove o arquivo temporário se o item não for encontrado
+        await fs
+          .unlink(imageFile.path)
+          .catch((err) =>
+            console.error("Erro ao remover arquivo temporário:", err)
+          );
+        return handleResponse(res, 404, {
+          success: false,
+          error: "Item não encontrado.",
+        });
+      }
+
+      // --- Processamento da Imagem com Sharp ---
+      let processedImageBuffer;
+      let finalImageType;
+
+      try {
+        // 🎯 Tenta redimensionar e converter para JPEG (formato universal e eficiente para Bando de Dados)
+        processedImageBuffer = await sharp(imageFile.path)
+          .resize(1000, 1000, {
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .jpeg({ quality: 85 }) // Conversão para JPEG com qualidade 85
+          .toBuffer();
+
+        finalImageType = "image/jpeg";
+      } catch (sharpError) {
+        // ⚠️ Se o Sharp falhar no processamento (pode acontecer com alguns tipos raros ou arquivos corrompidos),
+        // loga o erro e tenta salvar o buffer original (sem redimensionamento/compressão)
+        console.warn(
+          `Sharp falhou na conversão para JPEG. Tentando salvar o buffer original. Erro: ${sharpError.message}`
         );
 
-        if (!item) {
-            await fs
-                .unlink(imageFile.path)
-                .catch((err) =>
-                    console.error("Erro ao remover arquivo temporário:", err)
-                );
-            return handleResponse(res, 404, {
-                success: false,
-                error: "Item não encontrado.",
-            });
+        try {
+          // Tenta ler o buffer original, sem processamento (risco de arquivos grandes)
+          processedImageBuffer = await fs.readFile(imageFile.path);
+          finalImageType = originalMimeType;
+        } catch (fsReadError) {
+          throw new Error(
+            `Falha ao ler o arquivo temporário após erro do Sharp: ${fsReadError.message}`
+          );
         }
+      }
 
-        const processedImageBuffer = await sharp(imageFile.path)
-            .resize(1000, 1000, { 
-                fit: 'inside',
-                withoutEnlargement: true 
-            })
-            .jpeg({ quality: 85 }) 
-            .toBuffer();
-        
-        const imageData = processedImageBuffer;
-        const imageType = 'image/jpeg';
+      const imageData = processedImageBuffer;
+      const imageType = finalImageType; // Usa o tipo de imagem final (jpeg ou o original)
 
-        let message;
-        let statusCode;
-        let fkIdImage;
+      let message;
+      let statusCode;
+      let fkIdImage;
 
-        if (item.fkIdImage) {
-            await queryAsync(
-                "UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?",
-                [imageData, imageType, item.fkIdImage]
-            );
-            fkIdImage = item.fkIdImage;
-            message = "Imagem do item atualizada com sucesso!";
-            statusCode = 200;
-        } else {
-            // Usa o imageData e imageType CONVERTIDOS
-            const imageResult = await queryAsync(
-                "INSERT INTO image (imageData, imageType) VALUES (?, ?)",
-                [imageData, imageType]
-            );
-            fkIdImage = imageResult.insertId;
-            await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [
-                fkIdImage,
-                idItem,
-            ]);
-            message = "Imagem adicionada com sucesso ao item!";
-            statusCode = 201;
-        }
+      // --- Inserção/Atualização no Banco de Dados ---
+      if (item.fkIdImage) {
+        // Se já tem imagem, atualiza
+        await queryAsync(
+          "UPDATE image SET imageData = ?, imageType = ? WHERE idImage = ?",
+          [imageData, imageType, item.fkIdImage]
+        );
+        fkIdImage = item.fkIdImage;
+        message = "Imagem do item atualizada com sucesso!";
+        statusCode = 200;
+      } else {
+        // Se não tem imagem, insere
+        const imageResult = await queryAsync(
+          "INSERT INTO image (imageData, imageType) VALUES (?, ?)",
+          [imageData, imageType]
+        );
+        fkIdImage = imageResult.insertId;
+        await queryAsync("UPDATE item SET fkIdImage = ? WHERE idItem = ?", [
+          fkIdImage,
+          idItem,
+        ]);
+        message = "Imagem adicionada com sucesso ao item!";
+        statusCode = 201;
+      }
 
-        // Remove o arquivo temporário original
-        await fs
-            .unlink(imageFile.path)
-            .catch((err) =>
-                console.error("Erro ao remover arquivo temporário:", err)
-            );
-        
-        return handleResponse(res, statusCode, {
-            success: true,
-            message,
-            data: { fkIdImage },
-            arrayName: "data",
-        });
+      // Remove o arquivo temporário original, independentemente do sucesso
+      await fs
+        .unlink(imageFile.path)
+        .catch((err) =>
+          console.error("Erro ao remover arquivo temporário:", err)
+        );
+
+      return handleResponse(res, statusCode, {
+        success: true,
+        message,
+        data: { fkIdImage },
+        arrayName: "data",
+      });
     } catch (error) {
-        console.error("Erro ao inserir/atualizar imagem do item:", error);
-        if (imageFile) {
-            // Garante que o arquivo temporário é removido em caso de erro
-            await fs
-                .unlink(imageFile.path)
-                .catch((err) =>
-                    console.error("Erro ao remover arquivo temporário:", err)
-                );
-        }
-        return handleResponse(res, 500, {
-            success: false,
-            error: "Erro interno do servidor",
-            details: error.message,
-        });
+      console.error("Erro ao inserir/atualizar imagem do item:", error);
+      if (imageFile) {
+        // Garante que o arquivo temporário é removido em caso de erro
+        await fs
+          .unlink(imageFile.path)
+          .catch((err) =>
+            console.error("Erro ao remover arquivo temporário:", err)
+          );
+      }
+      return handleResponse(res, 500, {
+        success: false,
+        error: "Erro interno do servidor",
+        details: error.message,
+      });
     }
-}
+  }
 
   static async deleteImage(req, res) {
     const { idItem } = req.params;
